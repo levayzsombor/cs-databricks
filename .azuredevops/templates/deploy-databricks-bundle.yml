@@ -1,0 +1,56 @@
+parameters:
+  - name: targetName
+    type: string
+  - name: environmentName
+    type: string
+
+stages:
+  - stage: Deploy_${{ parameters.targetName }}
+    displayName: Deploy to ${{ parameters.environmentName }}
+    jobs:
+      - deployment: DeployDatabricksBundle
+        displayName: Deploy Databricks bundle
+        environment: ${{ parameters.environmentName }}
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+
+                - task: UsePythonVersion@0
+                  displayName: Use Python 3.11
+                  inputs:
+                    versionSpec: '3.11'
+
+                - script: |
+                    set -euo pipefail
+                    python -m pip install --upgrade pip
+                    if [ -f requirements.txt ]; then
+                      pip install -r requirements.txt
+                    fi
+                  displayName: Install Python dependencies
+
+                - script: |
+                    set -euo pipefail
+                    curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+                    echo "##vso[task.prependpath]$HOME/.databricks/bin"
+                  displayName: Install Databricks CLI
+
+                - script: |
+                    set -euo pipefail
+                    export PATH="$HOME/.databricks/bin:$PATH"
+                    databricks --version
+                    databricks bundle validate -t ${{ parameters.targetName }}
+                  displayName: Validate bundle for target
+                  env:
+                    DATABRICKS_HOST: $(DATABRICKS_HOST)
+                    DATABRICKS_TOKEN: $(DATABRICKS_TOKEN)
+
+                - script: |
+                    set -euo pipefail
+                    export PATH="$HOME/.databricks/bin:$PATH"
+                    databricks bundle deploy -t ${{ parameters.targetName }}
+                  displayName: Deploy bundle for target
+                  env:
+                    DATABRICKS_HOST: $(DATABRICKS_HOST)
+                    DATABRICKS_TOKEN: $(DATABRICKS_TOKEN)

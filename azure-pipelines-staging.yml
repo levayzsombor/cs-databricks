@@ -1,0 +1,14 @@
+name: staging-$(Date:yyyyMMdd)$(Rev:.r)
+
+trigger: none
+
+pr: none
+
+variables:
+  - group: databricks-staging
+
+extends:
+  template: .azuredevops/templates/deploy-databricks-bundle.yml
+  parameters:
+    targetName: staging
+    environmentName: databricks-staging
