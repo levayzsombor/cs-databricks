@@ -7,8 +7,10 @@
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	"features": {
-  		"ghcr.io/devcontainers/features/git:1": {}
-	}
+  		"ghcr.io/devcontainers/features/git:1": {},
+		"ghcr.io/devcontainers/features/azure-cli:1": {},
+		"ghcr.io/devcontainers/features/copilot-cli:1": {}
+	},
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
@@ -17,7 +19,25 @@
 	// "postCreateCommand": "uname -a",
 
 	// Configure tool-specific properties.
-	// "customizations": {},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"mhutchie.git-graph",
+				"waderyan.gitblame",
+				"donjayamanne.githistory",
+				"redhat.vscode-yaml",
+				"ms-python.python",
+				"ms-python.vscode-pylance",
+				"ms-python.debugpy",
+				"ms-python.vscode-python-envs",
+				"ms-toolsai.jupyter",
+				"databricks.databricks",
+				"GitHub.vscode-github-actions",
+				"GitHub.vscode-pull-request-github",
+				"GitHub.remotehub"
+			]
+		}
+	}
 
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
 	// "remoteUser": "root"
