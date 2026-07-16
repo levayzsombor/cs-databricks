@@ -35,6 +35,7 @@
 				"ms-python.debugpy",
 				"ms-python.vscode-python-envs",
 				"ms-toolsai.jupyter",
+				"echoapi.echoapi-for-vscode",
 				"databricks.databricks",
 				"GitHub.vscode-github-actions",
 				"GitHub.vscode-pull-request-github",
