@@ -20,21 +20,7 @@ variables:
 steps:
   - checkout: self
 
-  - script: |
-      set -euo pipefail
-
-      missing=0
-      for var_name in AZURE_SERVICE_CONNECTION AZURE_RESOURCE_GROUP AZURE_LOCATION DATABRICKS_TOKEN; do
-        if [ -z "${!var_name:-}" ]; then
-          echo "Missing required variable: ${var_name}"
-          missing=1
-        fi
-      done
-
-      if [ "$missing" -ne 0 ]; then
-        echo "Please set missing variables in Azure DevOps variable group 'databricks-dev' and authorize it for this pipeline."
-        exit 1
-      fi
+  - script: bash .azuredevops/scripts/preflight-required-vars.sh
     displayName: Preflight required variable check
     env:
       AZURE_SERVICE_CONNECTION: $(AZURE_SERVICE_CONNECTION)
@@ -47,168 +33,24 @@ steps:
     inputs:
       azureSubscription: $(AZURE_SERVICE_CONNECTION)
       scriptType: bash
-      scriptLocation: inlineScript
-      inlineScript: |
-        set -euo pipefail
+      scriptLocation: scriptPath
+      scriptPath: .azuredevops/scripts/ensure-databricks-workspace.sh
+    env:
+      DATABRICKS_WORKSPACE_NAME: $(DATABRICKS_WORKSPACE_NAME)
+      AZURE_RESOURCE_GROUP: $(AZURE_RESOURCE_GROUP)
+      AZURE_LOCATION: $(AZURE_LOCATION)
 
-        workspace_name="$(DATABRICKS_WORKSPACE_NAME)"
-        resource_group="$(AZURE_RESOURCE_GROUP)"
-        location="$(AZURE_LOCATION)"
-
-        if az databricks workspace show --name "$workspace_name" --resource-group "$resource_group" >/dev/null 2>&1; then
-          echo "Databricks workspace exists: $workspace_name"
-        else
-          echo "Creating Databricks workspace: $workspace_name"
-          az databricks workspace create \
-            --name "$workspace_name" \
-            --resource-group "$resource_group" \
-            --location "$location" \
-            --sku standard
-        fi
-
-        workspace_url=$(az databricks workspace show --name "$workspace_name" --resource-group "$resource_group" --query workspaceUrl -o tsv)
-        workspace_resource_id=$(az databricks workspace show --name "$workspace_name" --resource-group "$resource_group" --query id -o tsv)
-
-        echo "##vso[task.setvariable variable=DATABRICKS_HOST]https://${workspace_url}"
-        echo "##vso[task.setvariable variable=DATABRICKS_AZURE_RESOURCE_ID]${workspace_resource_id}"
-
-  - script: |
-      set -euo pipefail
-      curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
-      echo "##vso[task.prependpath]$HOME/.databricks/bin"
+  - script: bash .azuredevops/scripts/install-databricks-cli.sh
     displayName: Install Databricks CLI
 
-  - script: |
-      set -euo pipefail
-      export PATH="$HOME/.databricks/bin:$PATH"
-
-      python3 - <<'PY'
-      import json
-      import os
-      import urllib.request
-
-      host = os.environ["DATABRICKS_HOST"]
-      token = os.environ["DATABRICKS_TOKEN"]
-      cluster_name = os.environ["DATABRICKS_CLUSTER_NAME"]
-
-      headers = {
-          "Authorization": f"Bearer {token}",
-          "Content-Type": "application/json",
-      }
-
-      def db_get(path):
-          req = urllib.request.Request(f"{host}{path}", headers=headers, method="GET")
-          with urllib.request.urlopen(req) as r:
-              return json.loads(r.read().decode("utf-8"))
-
-      def db_post(path, payload):
-          data = json.dumps(payload).encode("utf-8")
-          req = urllib.request.Request(f"{host}{path}", headers=headers, data=data, method="POST")
-          with urllib.request.urlopen(req) as r:
-              return json.loads(r.read().decode("utf-8"))
-
-      spark_versions = db_get("/api/2.0/clusters/spark-versions").get("versions", [])
-      lts_spark = next((v.get("key") for v in spark_versions if v.get("long_term_support") and v.get("key")), None)
-      spark_version = lts_spark or (spark_versions[0].get("key") if spark_versions else None)
-      if not spark_version:
-          raise RuntimeError("No Databricks Spark version could be discovered from /clusters/spark-versions")
-
-      node_types = db_get("/api/2.0/clusters/list-node-types").get("node_types", [])
-      available_node_types = [n.get("node_type_id") for n in node_types if n.get("node_type_id")]
-      if not available_node_types:
-          raise RuntimeError("No Databricks node types could be discovered from /clusters/list-node-types")
-
-      preferred = ["Standard_DS3_v2", "Standard_D4s_v3", "Standard_D8s_v3"]
-      node_type_id = next((n for n in preferred if n in available_node_types), available_node_types[0])
-
-      clusters = db_get("/api/2.0/clusters/list").get("clusters", [])
-      cluster = next((c for c in clusters if c.get("cluster_name") == cluster_name), None)
-
-      if cluster is None:
-          print(f"Creating cluster: {cluster_name}")
-          created = db_post(
-              "/api/2.0/clusters/create",
-              {
-                  "cluster_name": cluster_name,
-                  "spark_version": spark_version,
-                  "node_type_id": node_type_id,
-                  "num_workers": 1,
-                  "autotermination_minutes": 30,
-              },
-          )
-          cluster_id = created["cluster_id"]
-      else:
-          cluster_id = cluster["cluster_id"]
-          state = cluster.get("state", "UNKNOWN")
-          print(f"Cluster exists: {cluster_name} ({cluster_id}) state={state}")
-          if state in {"TERMINATED", "TERMINATING", "ERROR"}:
-              print(f"Starting cluster: {cluster_id}")
-              db_post("/api/2.0/clusters/start", {"cluster_id": cluster_id})
-
-      print(f"Using cluster_id={cluster_id}")
-      PY
+  - script: python3 .azuredevops/scripts/ensure-databricks-cluster.py
     displayName: Ensure Databricks cluster is active
     env:
       DATABRICKS_HOST: $(DATABRICKS_HOST)
       DATABRICKS_TOKEN: $(DATABRICKS_TOKEN)
       DATABRICKS_CLUSTER_NAME: $(DATABRICKS_CLUSTER_NAME)
 
-  - script: |
-      set -euo pipefail
-
-      python3 - <<'PY'
-      import json
-      import os
-      import urllib.request
-
-      host = os.environ["DATABRICKS_HOST"]
-      token = os.environ["DATABRICKS_TOKEN"]
-      repo_url = os.environ["REPO_URL"]
-      repo_branch = os.environ["DATABRICKS_REPO_BRANCH"]
-      repo_provider = os.environ["DATABRICKS_REPO_PROVIDER"]
-      repo_name = os.environ["BUILD_REPOSITORY_NAME"].split("/")[-1]
-      repo_path = f"/Repos/CS-databricks-dev/{repo_name}"
-
-      headers = {
-          "Authorization": f"Bearer {token}",
-          "Content-Type": "application/json",
-      }
-
-      def request_json(path, method="GET", payload=None):
-          data = None
-          if payload is not None:
-              data = json.dumps(payload).encode("utf-8")
-          req = urllib.request.Request(f"{host}{path}", headers=headers, data=data, method=method)
-          with urllib.request.urlopen(req) as r:
-              return json.loads(r.read().decode("utf-8"))
-
-      repos = request_json("/api/2.0/repos?path_prefix=/Repos").get("repos", [])
-      existing = next((r for r in repos if r.get("url") == repo_url or r.get("path") == repo_path), None)
-
-      if existing is None:
-          created = request_json(
-              "/api/2.0/repos",
-              method="POST",
-              payload={
-                  "url": repo_url,
-                  "provider": repo_provider,
-                  "path": repo_path,
-                  "branch": repo_branch,
-              },
-          )
-          repo_id = created["id"]
-          print(f"Created Databricks repo id={repo_id} path={repo_path}")
-      else:
-          repo_id = existing["id"]
-          print(f"Databricks repo exists id={repo_id} path={existing.get('path')}")
-
-      request_json(
-          f"/api/2.0/repos/{repo_id}",
-          method="PATCH",
-          payload={"branch": repo_branch},
-      )
-      print(f"Updated Databricks repo {repo_id} to branch {repo_branch}")
-      PY
+  - script: python3 .azuredevops/scripts/sync-databricks-repo.py
     displayName: Sync main branch in Databricks Repo
     env:
       DATABRICKS_HOST: $(DATABRICKS_HOST)
@@ -218,46 +60,7 @@ steps:
       BUILD_REPOSITORY_NAME: $(Build.Repository.Name)
       REPO_URL: $(Build.Repository.Uri)
 
-  - script: |
-      set -euo pipefail
-
-      python3 - <<'PY'
-      import json
-      import os
-      import urllib.request
-
-      host = os.environ["DATABRICKS_HOST"]
-      token = os.environ["DATABRICKS_TOKEN"]
-      repo_branch = os.environ["DATABRICKS_REPO_BRANCH"]
-      target_path = os.environ["DATABRICKS_WORKSPACE_REPO_PATH"]
-
-      headers = {
-          "Authorization": f"Bearer {token}",
-          "Content-Type": "application/json",
-      }
-
-      def request_json(path, method="GET", payload=None):
-          data = None
-          if payload is not None:
-              data = json.dumps(payload).encode("utf-8")
-          req = urllib.request.Request(f"{host}{path}", headers=headers, data=data, method=method)
-          with urllib.request.urlopen(req) as r:
-              return json.loads(r.read().decode("utf-8"))
-
-      repos = request_json("/api/2.0/repos?path_prefix=/Repos").get("repos", [])
-      target = next((r for r in repos if r.get("path") == target_path), None)
-
-      if target is None:
-          raise RuntimeError(f"Databricks workspace repo path not found: {target_path}")
-
-      repo_id = target["id"]
-      request_json(
-          f"/api/2.0/repos/{repo_id}",
-          method="PATCH",
-          payload={"branch": repo_branch},
-      )
-      print(f"Updated workspace repo {target_path} (id={repo_id}) to branch {repo_branch}")
-      PY
+  - script: python3 .azuredevops/scripts/update-workspace-repo-folder.py
     displayName: Update existing Databricks workspace repo folder
     env:
       DATABRICKS_HOST: $(DATABRICKS_HOST)

@@ -22,34 +22,19 @@ stages:
                   inputs:
                     versionSpec: '3.11'
 
-                - script: |
-                    set -euo pipefail
-                    python -m pip install --upgrade pip
-                    if [ -f requirements.txt ]; then
-                      pip install -r requirements.txt
-                    fi
+                - script: bash .azuredevops/scripts/install-python-deps.sh
                   displayName: Install Python dependencies
 
-                - script: |
-                    set -euo pipefail
-                    curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
-                    echo "##vso[task.prependpath]$HOME/.databricks/bin"
+                - script: bash .azuredevops/scripts/install-databricks-cli.sh
                   displayName: Install Databricks CLI
 
-                - script: |
-                    set -euo pipefail
-                    export PATH="$HOME/.databricks/bin:$PATH"
-                    databricks --version
-                    databricks bundle validate -t ${{ parameters.targetName }}
+                - script: bash .azuredevops/scripts/validate-bundle.sh "${{ parameters.targetName }}"
                   displayName: Validate bundle for target
                   env:
                     DATABRICKS_HOST: $(DATABRICKS_HOST)
                     DATABRICKS_TOKEN: $(DATABRICKS_TOKEN)
 
-                - script: |
-                    set -euo pipefail
-                    export PATH="$HOME/.databricks/bin:$PATH"
-                    databricks bundle deploy -t ${{ parameters.targetName }}
+                - script: bash .azuredevops/scripts/deploy-bundle.sh "${{ parameters.targetName }}"
                   displayName: Deploy bundle for target
                   env:
                     DATABRICKS_HOST: $(DATABRICKS_HOST)
