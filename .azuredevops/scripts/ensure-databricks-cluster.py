@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import urllib.error
 import urllib.request
 
@@ -8,6 +9,7 @@ token = os.environ["DATABRICKS_TOKEN"]
 cluster_name = os.environ["DATABRICKS_CLUSTER_NAME"]
 data_security_mode = os.environ.get("DATABRICKS_DATA_SECURITY_MODE", "USER_ISOLATION")
 cluster_policy_id = os.environ.get("DATABRICKS_CLUSTER_POLICY_ID", "").strip()
+min_runtime = os.environ.get("DATABRICKS_MIN_RUNTIME", "13.3")
 
 headers = {
     "Authorization": f"Bearer {token}",
@@ -47,11 +49,79 @@ def db_post(path: str, payload: dict) -> dict:
     return _request(path, "POST", payload)
 
 
+def _runtime_tuple(version_key: str) -> tuple[int, int] | None:
+    match = re.match(r"^(\d+)\.(\d+)", version_key)
+    if not match:
+        return None
+    return int(match.group(1)), int(match.group(2))
+
+
+def _parse_min_runtime(value: str) -> tuple[int, int]:
+    parsed = _runtime_tuple(value)
+    if parsed is None:
+        raise RuntimeError(f"Invalid DATABRICKS_MIN_RUNTIME format: {value}. Expected like '13.3'.")
+    return parsed
+
+
+def _policy_supports_min_runtime(policy: dict, minimum: tuple[int, int]) -> bool:
+    definition_raw = policy.get("definition")
+    if not definition_raw:
+        return True
+
+    try:
+        definition = json.loads(definition_raw)
+    except Exception:
+        # If definition cannot be parsed, keep policy as candidate.
+        return True
+
+    spark = definition.get("spark_version")
+    if not isinstance(spark, dict):
+        return True
+
+    if spark.get("type") == "fixed":
+        value = spark.get("value")
+        if isinstance(value, str):
+            runtime = _runtime_tuple(value)
+            if runtime is not None and runtime < minimum:
+                return False
+    return True
+
+
+def _policy_priority(policy: dict) -> int:
+    name = str(policy.get("name", "")).lower()
+    if "shared compute" in name:
+        return 0
+    if "power user" in name:
+        return 1
+    if "personal compute" in name:
+        return 2
+    if "job compute" in name:
+        return 3
+    return 4
+
+
 spark_versions = db_get("/api/2.0/clusters/spark-versions").get("versions", [])
-lts_spark = next((v.get("key") for v in spark_versions if v.get("long_term_support") and v.get("key")), None)
-spark_version = lts_spark or (spark_versions[0].get("key") if spark_versions else None)
-if not spark_version:
-    raise RuntimeError("No Databricks Spark version could be discovered from /clusters/spark-versions")
+min_runtime_tuple = _parse_min_runtime(min_runtime)
+
+eligible_versions = []
+for version in spark_versions:
+    key = version.get("key")
+    if not key:
+        continue
+    runtime = _runtime_tuple(key)
+    if runtime is None:
+        continue
+    if runtime >= min_runtime_tuple:
+        eligible_versions.append(version)
+
+if not eligible_versions:
+    raise RuntimeError(
+        "No Databricks runtime meets minimum version "
+        f"{min_runtime} in /clusters/spark-versions."
+    )
+
+lts_spark = next((v.get("key") for v in eligible_versions if v.get("long_term_support") and v.get("key")), None)
+spark_version = lts_spark or eligible_versions[0].get("key")
 
 node_types = db_get("/api/2.0/clusters/list-node-types").get("node_types", [])
 available_node_types = [n.get("node_type_id") for n in node_types if n.get("node_type_id")]
@@ -91,6 +161,13 @@ if cluster is None:
         if "FEATURE_DISABLED" not in err_text:
             raise
 
+        if cluster_policy_id and "legacy access and legacy DBFS are disabled" in err_text:
+            raise RuntimeError(
+                "Cluster policy "
+                f"{cluster_policy_id} appears to enforce an unsupported Databricks runtime. "
+                f"Choose a policy compatible with runtime {min_runtime}+ (for example Shared Compute)."
+            ) from err
+
         # Workspaces with policy-enforced access modes may reject custom cluster creation.
         if not cluster_policy_id:
             policies = db_get("/api/2.0/policies/clusters/list").get("policies", [])
@@ -101,17 +178,39 @@ if cluster is None:
                     "'databricks-dev'."
                 ) from err
 
-            selected_policy_id = policies[0].get("policy_id")
-            if not selected_policy_id:
+            candidates = [
+                p for p in policies if p.get("policy_id") and _policy_supports_min_runtime(p, min_runtime_tuple)
+            ]
+            if not candidates:
                 raise RuntimeError(
-                    "Cluster policies were returned but no usable policy_id was found. "
-                    "Set DATABRICKS_CLUSTER_POLICY_ID explicitly."
+                    "No cluster policy in this workspace supports the minimum runtime "
+                    f"{min_runtime}+. Set DATABRICKS_CLUSTER_POLICY_ID to a compatible policy."
                 ) from err
 
-            print(f"Retrying cluster create with policy_id={selected_policy_id}")
-            create_payload["policy_id"] = selected_policy_id
-            create_payload.pop("data_security_mode", None)
-            created = _create_with_payload(create_payload)
+            candidates.sort(key=_policy_priority)
+            created = None
+            last_policy_error = None
+            for policy in candidates:
+                selected_policy_id = policy.get("policy_id")
+                if not selected_policy_id:
+                    continue
+
+                print(f"Retrying cluster create with policy_id={selected_policy_id} ({policy.get('name', 'unknown')})")
+                create_payload["policy_id"] = selected_policy_id
+                create_payload.pop("data_security_mode", None)
+
+                try:
+                    created = _create_with_payload(create_payload)
+                    break
+                except RuntimeError as policy_err:
+                    last_policy_error = policy_err
+                    continue
+
+            if created is None:
+                raise RuntimeError(
+                    "Failed to create cluster with all compatible policies. "
+                    f"Last error: {last_policy_error}"
+                ) from err
         else:
             raise
 
