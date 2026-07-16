@@ -3,11 +3,16 @@ name: Sync main into ua
 on:
   workflow_dispatch:
 
+concurrency:
+  group: ua-branch-mutations
+  cancel-in-progress: false
+
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
-  merge-main-into-ua:
+  create-main-to-ua-pr:
     runs-on: ubuntu-latest
 
     steps:
@@ -27,23 +32,57 @@ jobs:
           git fetch origin main
 
           if git ls-remote --exit-code --heads origin ua > /dev/null; then
-            git checkout -B ua origin/ua
+            echo "ua branch already exists"
           else
             git checkout -B ua origin/main
             git push origin ua
           fi
 
-      - name: Merge main into ua
+      - name: Prepare sync branch from main
         run: |
           set -euo pipefail
-          git fetch origin main ua
-          git checkout ua
+          git fetch origin main
+          git checkout -B sync/main-to-ua origin/main
+          git push --force-with-lease origin sync/main-to-ua
 
-          if git merge --no-ff --no-edit origin/main; then
-            git push origin ua
-            echo "main merged into ua successfully"
-          else
-            echo "merge conflict detected between main and ua"
-            git merge --abort || true
-            exit 1
-          fi
+      - name: Create or update PR to ua
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const head = `${owner}:sync/main-to-ua`;
+            const base = 'ua';
+
+            const existing = await github.paginate(github.rest.pulls.list, {
+              owner,
+              repo,
+              state: 'open',
+              head,
+              base,
+              per_page: 100,
+            });
+
+            if (existing.length > 0) {
+              core.info(`Existing PR found: #${existing[0].number}`);
+              return;
+            }
+
+            try {
+              const { data: pr } = await github.rest.pulls.create({
+                owner,
+                repo,
+                title: 'Sync main into ua',
+                body: 'Automated promotion PR from main to ua created by workflow_dispatch.',
+                head: 'sync/main-to-ua',
+                base: 'ua',
+                maintainer_can_modify: false,
+              });
+
+              core.info(`Created PR #${pr.number} (${pr.html_url})`);
+            } catch (error) {
+              if (error.status === 422) {
+                core.info('No changes to promote from main to ua.');
+                return;
+              }
+              throw error;
+            }

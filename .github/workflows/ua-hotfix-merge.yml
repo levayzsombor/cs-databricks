@@ -8,12 +8,17 @@ on:
         required: true
         type: number
 
+concurrency:
+  group: ua-branch-mutations
+  cancel-in-progress: false
+
 permissions:
   contents: write
-  pull-requests: read
+  pull-requests: write
+  issues: write
 
 jobs:
-  validate-and-merge-hotfix:
+  validate-and-promote-hotfix:
     runs-on: ubuntu-latest
 
     steps:
@@ -96,26 +101,105 @@ jobs:
           git fetch origin main
 
           if git ls-remote --exit-code --heads origin ua > /dev/null; then
-            git checkout -B ua origin/ua
+            echo "ua branch already exists"
           else
             git checkout -B ua origin/main
             git push origin ua
           fi
 
-      - name: Merge hotfix branch into ua
+      - name: Create or update hotfix promotion PR to ua
+        id: create_pr
+        uses: actions/github-script@v7
         env:
           HOTFIX_BRANCH: ${{ steps.validate.outputs.head_ref }}
-        run: |
-          set -euo pipefail
+          SOURCE_PR_NUMBER: ${{ inputs.pr_number }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const headRef = process.env.HOTFIX_BRANCH;
+            const sourcePrNumber = Number(process.env.SOURCE_PR_NUMBER);
+            const head = `${owner}:${headRef}`;
+            const base = 'ua';
 
-          git fetch origin "${HOTFIX_BRANCH}"
-          git checkout ua
+            const existing = await github.paginate(github.rest.pulls.list, {
+              owner,
+              repo,
+              state: 'open',
+              head,
+              base,
+              per_page: 100,
+            });
 
-          if git merge --no-ff --no-edit "origin/${HOTFIX_BRANCH}"; then
-            git push origin ua
-            echo "hotfix branch ${HOTFIX_BRANCH} merged into ua successfully"
-          else
-            echo "merge conflict detected while merging ${HOTFIX_BRANCH} into ua"
-            git merge --abort || true
-            exit 1
-          fi
+            if (existing.length > 0) {
+              core.setOutput('promotion_pr_number', String(existing[0].number));
+              core.setOutput('promotion_pr_url', existing[0].html_url);
+              core.info(`Existing promotion PR found: #${existing[0].number}`);
+              return;
+            }
+
+            try {
+              const { data: pr } = await github.rest.pulls.create({
+                owner,
+                repo,
+                title: `[UA Hotfix] PR #${sourcePrNumber} -> ua`,
+                body: `Automated UA hotfix promotion from branch ${headRef}.\n\nSource PR: #${sourcePrNumber}`,
+                head: headRef,
+                base,
+                maintainer_can_modify: false,
+              });
+
+              core.setOutput('promotion_pr_number', String(pr.number));
+              core.setOutput('promotion_pr_url', pr.html_url);
+              core.info(`Created promotion PR #${pr.number} (${pr.html_url})`);
+            } catch (error) {
+              if (error.status === 422) {
+                core.info('No changes to promote from hotfix branch to ua.');
+                core.setOutput('promotion_pr_number', '');
+                core.setOutput('promotion_pr_url', '');
+                return;
+              }
+              throw error;
+            }
+
+      - name: Comment success on source PR
+        if: ${{ success() }}
+        uses: actions/github-script@v7
+        env:
+          SOURCE_PR_NUMBER: ${{ inputs.pr_number }}
+          PROMOTION_PR_NUMBER: ${{ steps.create_pr.outputs.promotion_pr_number }}
+          PROMOTION_PR_URL: ${{ steps.create_pr.outputs.promotion_pr_url }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const sourcePrNumber = Number(process.env.SOURCE_PR_NUMBER);
+            const promotionPrNumber = process.env.PROMOTION_PR_NUMBER;
+            const promotionPrUrl = process.env.PROMOTION_PR_URL;
+
+            const body = promotionPrNumber
+              ? `UA hotfix promotion PR created/updated: #${promotionPrNumber} (${promotionPrUrl})`
+              : 'UA hotfix workflow completed. No changes were found to promote to ua.';
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: sourcePrNumber,
+              body,
+            });
+
+      - name: Comment failure on source PR
+        if: ${{ failure() }}
+        uses: actions/github-script@v7
+        env:
+          SOURCE_PR_NUMBER: ${{ inputs.pr_number }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const sourcePrNumber = Number(process.env.SOURCE_PR_NUMBER);
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: sourcePrNumber,
+              body: `UA hotfix promotion failed. See workflow logs: ${runUrl}`,
+            });
