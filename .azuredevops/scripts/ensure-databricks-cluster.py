@@ -3,6 +3,9 @@ import os
 import re
 import urllib.error
 import urllib.request
+from typing import Any, cast
+
+JsonDict = dict[str, Any]
 
 host = os.environ["DATABRICKS_HOST"]
 token = os.environ["DATABRICKS_TOKEN"]
@@ -20,7 +23,7 @@ headers = {
 }
 
 
-def _request(path: str, method: str, payload: dict | None = None) -> dict:
+def _request(path: str, method: str, payload: JsonDict | None = None) -> JsonDict:
     data = None
     if payload is not None:
         data = json.dumps(payload).encode("utf-8")
@@ -28,7 +31,10 @@ def _request(path: str, method: str, payload: dict | None = None) -> dict:
     req = urllib.request.Request(f"{host}{path}", headers=headers, data=data, method=method)
     try:
         with urllib.request.urlopen(req) as response:
-            return json.loads(response.read().decode("utf-8"))
+            response_data = json.loads(response.read().decode("utf-8"))
+            if not isinstance(response_data, dict):
+                raise RuntimeError(f"Unexpected Databricks API response type for {path}.")
+            return cast(JsonDict, response_data)
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
         if exc.code in (401, 403):
@@ -44,12 +50,24 @@ def _request(path: str, method: str, payload: dict | None = None) -> dict:
         ) from exc
 
 
-def db_get(path: str) -> dict:
+def db_get(path: str) -> JsonDict:
     return _request(path, "GET")
 
 
-def db_post(path: str, payload: dict) -> dict:
+def db_post(path: str, payload: JsonDict) -> JsonDict:
     return _request(path, "POST", payload)
+
+
+def _dict_list(value: Any) -> list[JsonDict]:
+    if not isinstance(value, list):
+        return []
+    items = cast(list[object], value)
+    return [cast(JsonDict, item) for item in items if isinstance(item, dict)]
+
+
+def _string_value(item: JsonDict, key: str) -> str | None:
+    value = item.get(key)
+    return value if isinstance(value, str) else None
 
 
 def _runtime_tuple(version_key: str) -> tuple[int, int] | None:
@@ -66,8 +84,8 @@ def _parse_min_runtime(value: str) -> tuple[int, int]:
     return parsed
 
 
-def _policy_supports_min_runtime(policy: dict, minimum: tuple[int, int]) -> bool:
-    definition_raw = policy.get("definition")
+def _policy_supports_min_runtime(policy: JsonDict, minimum: tuple[int, int]) -> bool:
+    definition_raw = _string_value(policy, "definition")
     if not definition_raw:
         return True
 
@@ -77,12 +95,17 @@ def _policy_supports_min_runtime(policy: dict, minimum: tuple[int, int]) -> bool
         # If definition cannot be parsed, keep policy as candidate.
         return True
 
-    spark = definition.get("spark_version")
-    if not isinstance(spark, dict):
+    if not isinstance(definition, dict):
         return True
 
-    if spark.get("type") == "fixed":
-        value = spark.get("value")
+    definition_dict = cast(JsonDict, definition)
+    spark = definition_dict.get("spark_version")
+    if not isinstance(spark, dict):
+        return True
+    spark_dict = cast(JsonDict, spark)
+
+    if _string_value(spark_dict, "type") == "fixed":
+        value = _string_value(spark_dict, "value")
         if isinstance(value, str):
             runtime = _runtime_tuple(value)
             if runtime is not None and runtime < minimum:
@@ -90,8 +113,8 @@ def _policy_supports_min_runtime(policy: dict, minimum: tuple[int, int]) -> bool
     return True
 
 
-def _policy_priority(policy: dict) -> int:
-    name = str(policy.get("name", "")).lower()
+def _policy_priority(policy: JsonDict) -> int:
+    name = (_string_value(policy, "name") or "").lower()
     if "shared compute" in name:
         return 0
     if "power user" in name:
@@ -103,12 +126,12 @@ def _policy_priority(policy: dict) -> int:
     return 4
 
 
-spark_versions = db_get("/api/2.0/clusters/spark-versions").get("versions", [])
+spark_versions = _dict_list(db_get("/api/2.0/clusters/spark-versions").get("versions", []))
 min_runtime_tuple = _parse_min_runtime(min_runtime)
 
-eligible_versions = []
+eligible_versions: list[JsonDict] = []
 for version in spark_versions:
-    key = version.get("key")
+    key = _string_value(version, "key")
     if not key:
         continue
     runtime = _runtime_tuple(key)
@@ -125,16 +148,20 @@ if not eligible_versions:
 
 lts_spark = next(
     (
-        v.get("key")
+        key
         for v in eligible_versions
-        if v.get("long_term_support") and v.get("key")
+        if v.get("long_term_support") and (key := _string_value(v, "key"))
     ),
     None,
 )
-spark_version = lts_spark or eligible_versions[0].get("key")
+spark_version = lts_spark or _string_value(eligible_versions[0], "key")
+if not spark_version:
+    raise RuntimeError("No Databricks runtime key could be selected from eligible versions.")
 
-node_types = db_get("/api/2.0/clusters/list-node-types").get("node_types", [])
-available_node_types = [n.get("node_type_id") for n in node_types if n.get("node_type_id")]
+node_types = _dict_list(db_get("/api/2.0/clusters/list-node-types").get("node_types", []))
+available_node_types = [
+    node_type_id for n in node_types if (node_type_id := _string_value(n, "node_type_id"))
+]
 if not available_node_types:
     raise RuntimeError(
         "No Databricks node types could be discovered from /clusters/list-node-types"
@@ -143,12 +170,12 @@ if not available_node_types:
 preferred = ["Standard_DS3_v2", "Standard_D4s_v3", "Standard_D8s_v3"]
 node_type_id = next((n for n in preferred if n in available_node_types), available_node_types[0])
 
-clusters = db_get("/api/2.0/clusters/list").get("clusters", [])
-cluster = next((c for c in clusters if c.get("cluster_name") == cluster_name), None)
+clusters = _dict_list(db_get("/api/2.0/clusters/list").get("clusters", []))
+cluster = next((c for c in clusters if _string_value(c, "cluster_name") == cluster_name), None)
 
 if cluster is None:
     print(f"Creating cluster: {cluster_name}")
-    create_payload = {
+    create_payload: JsonDict = {
         "cluster_name": cluster_name,
         "spark_version": spark_version,
         "node_type_id": node_type_id,
@@ -166,10 +193,10 @@ if cluster is None:
         # If a policy enforces access mode, do not send a conflicting custom access mode.
         create_payload.pop("data_security_mode", None)
 
-    def _create_with_payload(payload: dict) -> dict:
+    def _create_with_payload(payload: JsonDict) -> JsonDict:
         return db_post("/api/2.0/clusters/create", payload)
 
-    def _retry_worker_shape(err: RuntimeError, payload: dict) -> dict | None:
+    def _retry_worker_shape(err: RuntimeError, payload: JsonDict) -> JsonDict | None:
         err_text = str(err)
 
         if (
@@ -218,7 +245,7 @@ if cluster is None:
 
             # Workspaces with policy-enforced access modes may reject custom cluster creation.
             if not cluster_policy_id:
-                policies = db_get("/api/2.0/policies/clusters/list").get("policies", [])
+                policies = _dict_list(db_get("/api/2.0/policies/clusters/list").get("policies", []))
                 if not policies:
                     raise RuntimeError(
                         "Cluster creation is restricted by workspace policy and no "
@@ -244,13 +271,13 @@ if cluster is None:
                 created = None
                 last_policy_error = None
                 for policy in candidates:
-                    selected_policy_id = policy.get("policy_id")
+                    selected_policy_id = _string_value(policy, "policy_id")
                     if not selected_policy_id:
                         continue
 
                     print(
                         "Retrying cluster create with policy_id="
-                        f"{selected_policy_id} ({policy.get('name', 'unknown')})"
+                        f"{selected_policy_id} ({_string_value(policy, 'name') or 'unknown'})"
                     )
                     create_payload["policy_id"] = selected_policy_id
                     create_payload.pop("data_security_mode", None)
@@ -274,10 +301,14 @@ if cluster is None:
             else:
                 raise
 
-    cluster_id = created["cluster_id"]
+    cluster_id = _string_value(created, "cluster_id")
+    if not cluster_id:
+        raise RuntimeError("Databricks cluster create response did not include cluster_id.")
 else:
-    cluster_id = cluster["cluster_id"]
-    state = cluster.get("state", "UNKNOWN")
+    cluster_id = _string_value(cluster, "cluster_id")
+    if not cluster_id:
+        raise RuntimeError("Existing Databricks cluster did not include cluster_id.")
+    state = _string_value(cluster, "state") or "UNKNOWN"
     print(f"Cluster exists: {cluster_name} ({cluster_id}) state={state}")
     if state in {"TERMINATED", "TERMINATING", "ERROR"}:
         print(f"Starting cluster: {cluster_id}")
