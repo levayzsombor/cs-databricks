@@ -6,6 +6,8 @@ import urllib.request
 host = os.environ["DATABRICKS_HOST"]
 token = os.environ["DATABRICKS_TOKEN"]
 cluster_name = os.environ["DATABRICKS_CLUSTER_NAME"]
+data_security_mode = os.environ.get("DATABRICKS_DATA_SECURITY_MODE", "USER_ISOLATION")
+cluster_policy_id = os.environ.get("DATABRICKS_CLUSTER_POLICY_ID", "").strip()
 
 headers = {
     "Authorization": f"Bearer {token}",
@@ -64,16 +66,55 @@ cluster = next((c for c in clusters if c.get("cluster_name") == cluster_name), N
 
 if cluster is None:
     print(f"Creating cluster: {cluster_name}")
-    created = db_post(
-        "/api/2.0/clusters/create",
-        {
-            "cluster_name": cluster_name,
-            "spark_version": spark_version,
-            "node_type_id": node_type_id,
-            "num_workers": 1,
-            "autotermination_minutes": 30,
-        },
-    )
+    create_payload = {
+        "cluster_name": cluster_name,
+        "spark_version": spark_version,
+        "node_type_id": node_type_id,
+        "num_workers": 1,
+        "autotermination_minutes": 30,
+        # Many Azure Databricks workspaces disable NO_ISOLATION; USER_ISOLATION is broadly allowed.
+        "data_security_mode": data_security_mode,
+    }
+
+    if cluster_policy_id:
+        create_payload["policy_id"] = cluster_policy_id
+        # If a policy enforces access mode, do not send a conflicting custom access mode.
+        create_payload.pop("data_security_mode", None)
+
+    def _create_with_payload(payload: dict) -> dict:
+        return db_post("/api/2.0/clusters/create", payload)
+
+    try:
+        created = _create_with_payload(create_payload)
+    except RuntimeError as err:
+        err_text = str(err)
+        if "FEATURE_DISABLED" not in err_text:
+            raise
+
+        # Workspaces with policy-enforced access modes may reject custom cluster creation.
+        if not cluster_policy_id:
+            policies = db_get("/api/2.0/policies/clusters/list").get("policies", [])
+            if not policies:
+                raise RuntimeError(
+                    "Cluster creation is restricted by workspace policy and no cluster policies were found. "
+                    "Set DATABRICKS_CLUSTER_POLICY_ID to an allowed policy id in Azure DevOps variable group "
+                    "'databricks-dev'."
+                ) from err
+
+            selected_policy_id = policies[0].get("policy_id")
+            if not selected_policy_id:
+                raise RuntimeError(
+                    "Cluster policies were returned but no usable policy_id was found. "
+                    "Set DATABRICKS_CLUSTER_POLICY_ID explicitly."
+                ) from err
+
+            print(f"Retrying cluster create with policy_id={selected_policy_id}")
+            create_payload["policy_id"] = selected_policy_id
+            create_payload.pop("data_security_mode", None)
+            created = _create_with_payload(create_payload)
+        else:
+            raise
+
     cluster_id = created["cluster_id"]
 else:
     cluster_id = cluster["cluster_id"]

@@ -49,6 +49,7 @@ steps:
       DATABRICKS_HOST: $(DATABRICKS_HOST)
       DATABRICKS_TOKEN: $(DATABRICKS_TOKEN)
       DATABRICKS_CLUSTER_NAME: $(DATABRICKS_CLUSTER_NAME)
+      DATABRICKS_CLUSTER_POLICY_ID: $(DATABRICKS_CLUSTER_POLICY_ID)
 
   - script: python3 .azuredevops/scripts/sync-databricks-repo.py
     displayName: Sync main branch in Databricks Repo
