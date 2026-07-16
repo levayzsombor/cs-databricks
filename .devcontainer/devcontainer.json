@@ -47,7 +47,7 @@
 			"settings": {
 				"chat.agent.enabled": true,
 				"github.copilot.chat.webSearch.enabled": true,
-				"python.analysis.typeCheckingMode": "strict",
+				"python.analysis.typeCheckingMode": "standard",
 				"ruff.nativeServer": "on",
 				"ruff.organizeImports": true,
 				"[python]": {
