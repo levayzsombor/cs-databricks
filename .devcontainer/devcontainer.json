@@ -32,6 +32,7 @@
 				"redhat.vscode-yaml",
 				"ms-python.python",
 				"ms-python.vscode-pylance",
+				"charliermarsh.ruff",
 				"ms-python.debugpy",
 				"ms-python.vscode-python-envs",
 				"ms-toolsai.jupyter",
@@ -45,7 +46,13 @@
 			],
 			"settings": {
 				"chat.agent.enabled": true,
-				"github.copilot.chat.webSearch.enabled": true
+				"github.copilot.chat.webSearch.enabled": true,
+				"python.analysis.typeCheckingMode": "strict",
+				"ruff.nativeServer": "on",
+				"ruff.organizeImports": true,
+				"[python]": {
+					"editor.formatOnSave": true
+				}
 			}
 		}
 	}

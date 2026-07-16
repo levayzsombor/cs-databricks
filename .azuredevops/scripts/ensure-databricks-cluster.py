@@ -123,13 +123,22 @@ if not eligible_versions:
         f"{min_runtime} in /clusters/spark-versions."
     )
 
-lts_spark = next((v.get("key") for v in eligible_versions if v.get("long_term_support") and v.get("key")), None)
+lts_spark = next(
+    (
+        v.get("key")
+        for v in eligible_versions
+        if v.get("long_term_support") and v.get("key")
+    ),
+    None,
+)
 spark_version = lts_spark or eligible_versions[0].get("key")
 
 node_types = db_get("/api/2.0/clusters/list-node-types").get("node_types", [])
 available_node_types = [n.get("node_type_id") for n in node_types if n.get("node_type_id")]
 if not available_node_types:
-    raise RuntimeError("No Databricks node types could be discovered from /clusters/list-node-types")
+    raise RuntimeError(
+        "No Databricks node types could be discovered from /clusters/list-node-types"
+    )
 
 preferred = ["Standard_DS3_v2", "Standard_D4s_v3", "Standard_D8s_v3"]
 node_type_id = next((n for n in preferred if n in available_node_types), available_node_types[0])
@@ -163,7 +172,10 @@ if cluster is None:
     def _retry_worker_shape(err: RuntimeError, payload: dict) -> dict | None:
         err_text = str(err)
 
-        if "num_workers, the value cannot be present" in err_text and "autoscale.min_workers, the value must be present" in err_text:
+        if (
+            "num_workers, the value cannot be present" in err_text
+            and "autoscale.min_workers, the value must be present" in err_text
+        ):
             adjusted = dict(payload)
             adjusted.pop("num_workers", None)
             adjusted["autoscale"] = {
@@ -173,7 +185,10 @@ if cluster is None:
             print("Retrying cluster create with autoscale worker configuration")
             return _create_with_payload(adjusted)
 
-        if "autoscale.min_workers, the value cannot be present" in err_text or "num_workers, the value must be present" in err_text:
+        if (
+            "autoscale.min_workers, the value cannot be present" in err_text
+            or "num_workers, the value must be present" in err_text
+        ):
             adjusted = dict(payload)
             adjusted.pop("autoscale", None)
             adjusted["num_workers"] = fixed_num_workers
@@ -197,7 +212,8 @@ if cluster is None:
                 raise RuntimeError(
                     "Cluster policy "
                     f"{cluster_policy_id} appears to enforce an unsupported Databricks runtime. "
-                    f"Choose a policy compatible with runtime {min_runtime}+ (for example Shared Compute)."
+                    "Choose a policy compatible with runtime "
+                    f"{min_runtime}+ (for example Shared Compute)."
                 ) from err
 
             # Workspaces with policy-enforced access modes may reject custom cluster creation.
@@ -205,13 +221,18 @@ if cluster is None:
                 policies = db_get("/api/2.0/policies/clusters/list").get("policies", [])
                 if not policies:
                     raise RuntimeError(
-                        "Cluster creation is restricted by workspace policy and no cluster policies were found. "
-                        "Set DATABRICKS_CLUSTER_POLICY_ID to an allowed policy id in Azure DevOps variable group "
+                        "Cluster creation is restricted by workspace policy and no "
+                        "cluster policies were found. Set "
+                        "DATABRICKS_CLUSTER_POLICY_ID to an allowed policy id in Azure "
+                        "DevOps variable group "
                         "'databricks-dev'."
                     ) from err
 
                 candidates = [
-                    p for p in policies if p.get("policy_id") and _policy_supports_min_runtime(p, min_runtime_tuple)
+                    p
+                    for p in policies
+                    if p.get("policy_id")
+                    and _policy_supports_min_runtime(p, min_runtime_tuple)
                 ]
                 if not candidates:
                     raise RuntimeError(
@@ -227,7 +248,10 @@ if cluster is None:
                     if not selected_policy_id:
                         continue
 
-                    print(f"Retrying cluster create with policy_id={selected_policy_id} ({policy.get('name', 'unknown')})")
+                    print(
+                        "Retrying cluster create with policy_id="
+                        f"{selected_policy_id} ({policy.get('name', 'unknown')})"
+                    )
                     create_payload["policy_id"] = selected_policy_id
                     create_payload.pop("data_security_mode", None)
 

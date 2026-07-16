@@ -1,0 +1,22 @@
+target-version = "py312"
+line-length = 100
+extend-exclude = [
+    ".venv",
+]
+
+[lint]
+select = [
+    "E",
+    "F",
+    "I",
+    "UP",
+]
+
+[lint.per-file-ignores]
+"typings/__builtins__.pyi" = ["F403", "F405"]
+
+[format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+docstring-code-format = true
