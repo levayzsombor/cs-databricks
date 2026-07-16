@@ -10,6 +10,9 @@ cluster_name = os.environ["DATABRICKS_CLUSTER_NAME"]
 data_security_mode = os.environ.get("DATABRICKS_DATA_SECURITY_MODE", "USER_ISOLATION")
 cluster_policy_id = os.environ.get("DATABRICKS_CLUSTER_POLICY_ID", "").strip()
 min_runtime = os.environ.get("DATABRICKS_MIN_RUNTIME", "13.3")
+autoscale_min_workers = int(os.environ.get("DATABRICKS_AUTOSCALE_MIN_WORKERS", "1"))
+autoscale_max_workers = int(os.environ.get("DATABRICKS_AUTOSCALE_MAX_WORKERS", "2"))
+fixed_num_workers = int(os.environ.get("DATABRICKS_NUM_WORKERS", "1"))
 
 headers = {
     "Authorization": f"Bearer {token}",
@@ -140,7 +143,10 @@ if cluster is None:
         "cluster_name": cluster_name,
         "spark_version": spark_version,
         "node_type_id": node_type_id,
-        "num_workers": 1,
+        "autoscale": {
+            "min_workers": autoscale_min_workers,
+            "max_workers": autoscale_max_workers,
+        },
         "autotermination_minutes": 30,
         # Many Azure Databricks workspaces disable NO_ISOLATION; USER_ISOLATION is broadly allowed.
         "data_security_mode": data_security_mode,
@@ -154,65 +160,95 @@ if cluster is None:
     def _create_with_payload(payload: dict) -> dict:
         return db_post("/api/2.0/clusters/create", payload)
 
+    def _retry_worker_shape(err: RuntimeError, payload: dict) -> dict | None:
+        err_text = str(err)
+
+        if "num_workers, the value cannot be present" in err_text and "autoscale.min_workers, the value must be present" in err_text:
+            adjusted = dict(payload)
+            adjusted.pop("num_workers", None)
+            adjusted["autoscale"] = {
+                "min_workers": autoscale_min_workers,
+                "max_workers": autoscale_max_workers,
+            }
+            print("Retrying cluster create with autoscale worker configuration")
+            return _create_with_payload(adjusted)
+
+        if "autoscale.min_workers, the value cannot be present" in err_text or "num_workers, the value must be present" in err_text:
+            adjusted = dict(payload)
+            adjusted.pop("autoscale", None)
+            adjusted["num_workers"] = fixed_num_workers
+            print("Retrying cluster create with fixed num_workers configuration")
+            return _create_with_payload(adjusted)
+
+        return None
+
     try:
         created = _create_with_payload(create_payload)
     except RuntimeError as err:
-        err_text = str(err)
-        if "FEATURE_DISABLED" not in err_text:
-            raise
-
-        if cluster_policy_id and "legacy access and legacy DBFS are disabled" in err_text:
-            raise RuntimeError(
-                "Cluster policy "
-                f"{cluster_policy_id} appears to enforce an unsupported Databricks runtime. "
-                f"Choose a policy compatible with runtime {min_runtime}+ (for example Shared Compute)."
-            ) from err
-
-        # Workspaces with policy-enforced access modes may reject custom cluster creation.
-        if not cluster_policy_id:
-            policies = db_get("/api/2.0/policies/clusters/list").get("policies", [])
-            if not policies:
-                raise RuntimeError(
-                    "Cluster creation is restricted by workspace policy and no cluster policies were found. "
-                    "Set DATABRICKS_CLUSTER_POLICY_ID to an allowed policy id in Azure DevOps variable group "
-                    "'databricks-dev'."
-                ) from err
-
-            candidates = [
-                p for p in policies if p.get("policy_id") and _policy_supports_min_runtime(p, min_runtime_tuple)
-            ]
-            if not candidates:
-                raise RuntimeError(
-                    "No cluster policy in this workspace supports the minimum runtime "
-                    f"{min_runtime}+. Set DATABRICKS_CLUSTER_POLICY_ID to a compatible policy."
-                ) from err
-
-            candidates.sort(key=_policy_priority)
-            created = None
-            last_policy_error = None
-            for policy in candidates:
-                selected_policy_id = policy.get("policy_id")
-                if not selected_policy_id:
-                    continue
-
-                print(f"Retrying cluster create with policy_id={selected_policy_id} ({policy.get('name', 'unknown')})")
-                create_payload["policy_id"] = selected_policy_id
-                create_payload.pop("data_security_mode", None)
-
-                try:
-                    created = _create_with_payload(create_payload)
-                    break
-                except RuntimeError as policy_err:
-                    last_policy_error = policy_err
-                    continue
-
-            if created is None:
-                raise RuntimeError(
-                    "Failed to create cluster with all compatible policies. "
-                    f"Last error: {last_policy_error}"
-                ) from err
+        worker_retry = _retry_worker_shape(err, create_payload)
+        if worker_retry is not None:
+            created = worker_retry
         else:
-            raise
+            err_text = str(err)
+            if "FEATURE_DISABLED" not in err_text:
+                raise
+
+            if cluster_policy_id and "legacy access and legacy DBFS are disabled" in err_text:
+                raise RuntimeError(
+                    "Cluster policy "
+                    f"{cluster_policy_id} appears to enforce an unsupported Databricks runtime. "
+                    f"Choose a policy compatible with runtime {min_runtime}+ (for example Shared Compute)."
+                ) from err
+
+            # Workspaces with policy-enforced access modes may reject custom cluster creation.
+            if not cluster_policy_id:
+                policies = db_get("/api/2.0/policies/clusters/list").get("policies", [])
+                if not policies:
+                    raise RuntimeError(
+                        "Cluster creation is restricted by workspace policy and no cluster policies were found. "
+                        "Set DATABRICKS_CLUSTER_POLICY_ID to an allowed policy id in Azure DevOps variable group "
+                        "'databricks-dev'."
+                    ) from err
+
+                candidates = [
+                    p for p in policies if p.get("policy_id") and _policy_supports_min_runtime(p, min_runtime_tuple)
+                ]
+                if not candidates:
+                    raise RuntimeError(
+                        "No cluster policy in this workspace supports the minimum runtime "
+                        f"{min_runtime}+. Set DATABRICKS_CLUSTER_POLICY_ID to a compatible policy."
+                    ) from err
+
+                candidates.sort(key=_policy_priority)
+                created = None
+                last_policy_error = None
+                for policy in candidates:
+                    selected_policy_id = policy.get("policy_id")
+                    if not selected_policy_id:
+                        continue
+
+                    print(f"Retrying cluster create with policy_id={selected_policy_id} ({policy.get('name', 'unknown')})")
+                    create_payload["policy_id"] = selected_policy_id
+                    create_payload.pop("data_security_mode", None)
+
+                    try:
+                        created = _create_with_payload(create_payload)
+                        break
+                    except RuntimeError as policy_err:
+                        retry_created = _retry_worker_shape(policy_err, create_payload)
+                        if retry_created is not None:
+                            created = retry_created
+                            break
+                        last_policy_error = policy_err
+                        continue
+
+                if created is None:
+                    raise RuntimeError(
+                        "Failed to create cluster with all compatible policies. "
+                        f"Last error: {last_policy_error}"
+                    ) from err
+            else:
+                raise
 
     cluster_id = created["cluster_id"]
 else:
