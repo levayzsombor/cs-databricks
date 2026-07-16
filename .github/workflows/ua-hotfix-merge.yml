@@ -1,0 +1,121 @@
+name: Merge hotfix PR branch into ua
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number to merge into ua
+        required: true
+        type: number
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  validate-and-merge-hotfix:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate hotfix PR state
+        id: validate
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = Number(core.getInput('pr_number'));
+            if (!Number.isInteger(prNumber) || prNumber <= 0) {
+              core.setFailed('pr_number must be a positive integer.');
+              return;
+            }
+
+            const { owner, repo } = context.repo;
+
+            const { data: pr } = await github.rest.pulls.get({
+              owner,
+              repo,
+              pull_number: prNumber,
+            });
+
+            if (pr.state !== 'open') {
+              core.setFailed(`PR #${prNumber} is not open.`);
+              return;
+            }
+
+            const labels = pr.labels.map((l) => l.name.toLowerCase());
+            if (!labels.includes('hotfix')) {
+              core.setFailed(`PR #${prNumber} does not have the hotfix label.`);
+              return;
+            }
+
+            if (!pr.head.repo || pr.head.repo.full_name !== `${owner}/${repo}`) {
+              core.setFailed('Hotfix branch must come from the same repository.');
+              return;
+            }
+
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner,
+              repo,
+              pull_number: prNumber,
+              per_page: 100,
+            });
+
+            const latestByUser = new Map();
+            for (const review of reviews) {
+              latestByUser.set(review.user.login, review.state);
+            }
+
+            const hasBlockingChangeRequest = [...latestByUser.values()].includes('CHANGES_REQUESTED');
+            const approvalCount = [...latestByUser.values()].filter((state) => state === 'APPROVED').length;
+
+            if (hasBlockingChangeRequest) {
+              core.setFailed(`PR #${prNumber} has an active CHANGES_REQUESTED review.`);
+              return;
+            }
+
+            if (approvalCount < 1) {
+              core.setFailed(`PR #${prNumber} must have at least one approval.`);
+              return;
+            }
+
+            core.setOutput('head_ref', pr.head.ref);
+            core.info(`PR #${prNumber} validated. Branch: ${pr.head.ref}`);
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Ensure ua branch exists
+        run: |
+          set -euo pipefail
+          git fetch origin main
+
+          if git ls-remote --exit-code --heads origin ua > /dev/null; then
+            git checkout -B ua origin/ua
+          else
+            git checkout -B ua origin/main
+            git push origin ua
+          fi
+
+      - name: Merge hotfix branch into ua
+        env:
+          HOTFIX_BRANCH: ${{ steps.validate.outputs.head_ref }}
+        run: |
+          set -euo pipefail
+
+          git fetch origin "${HOTFIX_BRANCH}"
+          git checkout ua
+
+          if git merge --no-ff --no-edit "origin/${HOTFIX_BRANCH}"; then
+            git push origin ua
+            echo "hotfix branch ${HOTFIX_BRANCH} merged into ua successfully"
+          else
+            echo "merge conflict detected while merging ${HOTFIX_BRANCH} into ua"
+            git merge --abort || true
+            exit 1
+          fi

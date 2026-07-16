@@ -1,0 +1,49 @@
+name: Sync main into ua
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  merge-main-into-ua:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Ensure ua branch exists
+        run: |
+          set -euo pipefail
+          git fetch origin main
+
+          if git ls-remote --exit-code --heads origin ua > /dev/null; then
+            git checkout -B ua origin/ua
+          else
+            git checkout -B ua origin/main
+            git push origin ua
+          fi
+
+      - name: Merge main into ua
+        run: |
+          set -euo pipefail
+          git fetch origin main ua
+          git checkout ua
+
+          if git merge --no-ff --no-edit origin/main; then
+            git push origin ua
+            echo "main merged into ua successfully"
+          else
+            echo "merge conflict detected between main and ua"
+            git merge --abort || true
+            exit 1
+          fi
