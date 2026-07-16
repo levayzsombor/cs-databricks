@@ -28,14 +28,14 @@ def request_json(path: str, method: str = "GET", payload: JsonDict | None = None
         response_data = json.loads(response.read().decode("utf-8"))
         if not isinstance(response_data, dict):
             raise RuntimeError(f"Unexpected Databricks API response type for {path}.")
-        return cast(JsonDict, response_data)
+        return cast("JsonDict", response_data)
 
 
-def _dict_list(value: Any) -> list[JsonDict]:
+def _dict_list(value: object) -> list[JsonDict]:
     if not isinstance(value, list):
         return []
-    items = cast(list[object], value)
-    return [cast(JsonDict, item) for item in items if isinstance(item, dict)]
+    items = cast("list[object]", value)
+    return [cast("JsonDict", item) for item in items if isinstance(item, dict)]
 
 
 def _string_value(item: JsonDict, key: str) -> str | None:
@@ -50,11 +50,7 @@ def _int_value(item: JsonDict, key: str) -> int | None:
 
 repos = _dict_list(request_json("/api/2.0/repos?path_prefix=/Repos").get("repos", []))
 existing = next(
-    (
-        r
-        for r in repos
-        if _string_value(r, "url") == repo_url or _string_value(r, "path") == repo_path
-    ),
+    (r for r in repos if _string_value(r, "url") == repo_url or _string_value(r, "path") == repo_path),
     None,
 )
 

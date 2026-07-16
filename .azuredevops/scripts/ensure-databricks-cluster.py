@@ -34,7 +34,7 @@ def _request(path: str, method: str, payload: JsonDict | None = None) -> JsonDic
             response_data = json.loads(response.read().decode("utf-8"))
             if not isinstance(response_data, dict):
                 raise RuntimeError(f"Unexpected Databricks API response type for {path}.")
-            return cast(JsonDict, response_data)
+            return cast("JsonDict", response_data)
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
         if exc.code in (401, 403):
@@ -45,9 +45,7 @@ def _request(path: str, method: str, payload: JsonDict | None = None) -> JsonDic
                 "and is still valid, then update variable group 'databricks-dev'. "
                 f"API path: {path}. Response: {body}"
             ) from exc
-        raise RuntimeError(
-            f"Databricks API call failed with HTTP {exc.code} for {path}. Response: {body}"
-        ) from exc
+        raise RuntimeError(f"Databricks API call failed with HTTP {exc.code} for {path}. Response: {body}") from exc
 
 
 def db_get(path: str) -> JsonDict:
@@ -58,11 +56,11 @@ def db_post(path: str, payload: JsonDict) -> JsonDict:
     return _request(path, "POST", payload)
 
 
-def _dict_list(value: Any) -> list[JsonDict]:
+def _dict_list(value: object) -> list[JsonDict]:
     if not isinstance(value, list):
         return []
-    items = cast(list[object], value)
-    return [cast(JsonDict, item) for item in items if isinstance(item, dict)]
+    items = cast("list[object]", value)
+    return [cast("JsonDict", item) for item in items if isinstance(item, dict)]
 
 
 def _string_value(item: JsonDict, key: str) -> str | None:
@@ -98,11 +96,11 @@ def _policy_supports_min_runtime(policy: JsonDict, minimum: tuple[int, int]) -> 
     if not isinstance(definition, dict):
         return True
 
-    definition_dict = cast(JsonDict, definition)
+    definition_dict = cast("JsonDict", definition)
     spark = definition_dict.get("spark_version")
     if not isinstance(spark, dict):
         return True
-    spark_dict = cast(JsonDict, spark)
+    spark_dict = cast("JsonDict", spark)
 
     if _string_value(spark_dict, "type") == "fixed":
         value = _string_value(spark_dict, "value")
@@ -141,17 +139,10 @@ for version in spark_versions:
         eligible_versions.append(version)
 
 if not eligible_versions:
-    raise RuntimeError(
-        "No Databricks runtime meets minimum version "
-        f"{min_runtime} in /clusters/spark-versions."
-    )
+    raise RuntimeError(f"No Databricks runtime meets minimum version {min_runtime} in /clusters/spark-versions.")
 
 lts_spark = next(
-    (
-        key
-        for v in eligible_versions
-        if v.get("long_term_support") and (key := _string_value(v, "key"))
-    ),
+    (key for v in eligible_versions if v.get("long_term_support") and (key := _string_value(v, "key"))),
     None,
 )
 spark_version = lts_spark or _string_value(eligible_versions[0], "key")
@@ -159,13 +150,9 @@ if not spark_version:
     raise RuntimeError("No Databricks runtime key could be selected from eligible versions.")
 
 node_types = _dict_list(db_get("/api/2.0/clusters/list-node-types").get("node_types", []))
-available_node_types = [
-    node_type_id for n in node_types if (node_type_id := _string_value(n, "node_type_id"))
-]
+available_node_types = [node_type_id for n in node_types if (node_type_id := _string_value(n, "node_type_id"))]
 if not available_node_types:
-    raise RuntimeError(
-        "No Databricks node types could be discovered from /clusters/list-node-types"
-    )
+    raise RuntimeError("No Databricks node types could be discovered from /clusters/list-node-types")
 
 preferred = ["Standard_DS3_v2", "Standard_D4s_v3", "Standard_D8s_v3"]
 node_type_id = next((n for n in preferred if n in available_node_types), available_node_types[0])
@@ -256,10 +243,7 @@ if cluster is None:
                     ) from err
 
                 candidates = [
-                    p
-                    for p in policies
-                    if p.get("policy_id")
-                    and _policy_supports_min_runtime(p, min_runtime_tuple)
+                    p for p in policies if p.get("policy_id") and _policy_supports_min_runtime(p, min_runtime_tuple)
                 ]
                 if not candidates:
                     raise RuntimeError(
@@ -295,8 +279,7 @@ if cluster is None:
 
                 if created is None:
                     raise RuntimeError(
-                        "Failed to create cluster with all compatible policies. "
-                        f"Last error: {last_policy_error}"
+                        f"Failed to create cluster with all compatible policies. Last error: {last_policy_error}"
                     ) from err
             else:
                 raise

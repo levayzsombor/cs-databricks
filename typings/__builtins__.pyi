@@ -11,7 +11,9 @@ sql = sqlContext.sql
 table = sqlContext.table
 getArgument = dbutils.widgets.getArgument
 
-def displayHTML(html): ...
-
-def display(input=None, *args, **kwargs): ...
-
+def displayHTML(html: str) -> None: ...
+def display(
+    input: object | None = None,
+    *args: object,
+    **kwargs: object,
+) -> None: ...
