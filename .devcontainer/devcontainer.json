@@ -37,8 +37,14 @@
 				"databricks.databricks",
 				"GitHub.vscode-github-actions",
 				"GitHub.vscode-pull-request-github",
-				"GitHub.remotehub"
-			]
+				"GitHub.remotehub",
+				"GitHub.copilot",
+				"GitHub.copilot-chat"
+			],
+			"settings": {
+				"chat.agent.enabled": true,
+				"github.copilot.chat.webSearch.enabled": true
+			}
 		}
 	}
 
