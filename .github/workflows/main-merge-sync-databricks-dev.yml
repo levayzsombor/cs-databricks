@@ -1,0 +1,64 @@
+name: Sync main to Azure Databricks dev
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  ensure-pipeline-and-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Install Azure DevOps extension
+        run: az extension add --name azure-devops --yes
+
+      - name: Ensure Azure DevOps pipeline exists
+        env:
+          AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZDO_PAT }}
+          AZDO_ORG_URL: ${{ secrets.AZDO_ORG_URL }}
+          AZDO_PROJECT: ${{ secrets.AZDO_PROJECT }}
+          AZDO_GITHUB_SERVICE_CONNECTION: ${{ secrets.AZDO_GITHUB_SERVICE_CONNECTION }}
+          PIPELINE_NAME: cs-databricks-dev-sync
+          PIPELINE_YAML_PATH: .azuredevops/pipelines/cs-databricks-dev-sync.yml
+        run: |
+          set -euo pipefail
+
+          az devops configure --defaults organization="$AZDO_ORG_URL" project="$AZDO_PROJECT"
+
+          pipeline_id=$(az pipelines list --query "[?name=='${PIPELINE_NAME}'].id | [0]" -o tsv)
+
+          if [ -z "${pipeline_id}" ]; then
+            echo "Creating Azure DevOps pipeline: ${PIPELINE_NAME}"
+            pipeline_id=$(az pipelines create \
+              --name "${PIPELINE_NAME}" \
+              --repository "${GITHUB_REPOSITORY}" \
+              --repository-type github \
+              --branch main \
+              --yml-path "${PIPELINE_YAML_PATH}" \
+              --service-connection "${AZDO_GITHUB_SERVICE_CONNECTION}" \
+              --skip-first-run true \
+              --query id \
+              -o tsv)
+          fi
+
+          echo "PIPELINE_ID=${pipeline_id}" >> "$GITHUB_ENV"
+
+      - name: Run Azure DevOps pipeline
+        env:
+          AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZDO_PAT }}
+          AZDO_ORG_URL: ${{ secrets.AZDO_ORG_URL }}
+          AZDO_PROJECT: ${{ secrets.AZDO_PROJECT }}
+        run: |
+          set -euo pipefail
+
+          az devops configure --defaults organization="$AZDO_ORG_URL" project="$AZDO_PROJECT"
+          az pipelines run --id "$PIPELINE_ID" --branch main
