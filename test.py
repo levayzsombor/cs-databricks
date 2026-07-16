@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import TypeVar
 
+# comment
+
 @dataclass
 class Test:
     name: str
