@@ -1,5 +1,6 @@
 import json
 import os
+import urllib.error
 import urllib.request
 
 host = os.environ["DATABRICKS_HOST"]
@@ -12,17 +13,36 @@ headers = {
 }
 
 
+def _request(path: str, method: str, payload: dict | None = None) -> dict:
+    data = None
+    if payload is not None:
+        data = json.dumps(payload).encode("utf-8")
+
+    req = urllib.request.Request(f"{host}{path}", headers=headers, data=data, method=method)
+    try:
+        with urllib.request.urlopen(req) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        if exc.code in (401, 403):
+            raise RuntimeError(
+                "Databricks authentication failed with "
+                f"HTTP {exc.code} for host {host}. "
+                "Ensure DATABRICKS_TOKEN was created in this exact workspace host "
+                "and is still valid, then update variable group 'databricks-dev'. "
+                f"API path: {path}. Response: {body}"
+            ) from exc
+        raise RuntimeError(
+            f"Databricks API call failed with HTTP {exc.code} for {path}. Response: {body}"
+        ) from exc
+
+
 def db_get(path: str) -> dict:
-    req = urllib.request.Request(f"{host}{path}", headers=headers, method="GET")
-    with urllib.request.urlopen(req) as response:
-        return json.loads(response.read().decode("utf-8"))
+    return _request(path, "GET")
 
 
 def db_post(path: str, payload: dict) -> dict:
-    data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(f"{host}{path}", headers=headers, data=data, method="POST")
-    with urllib.request.urlopen(req) as response:
-        return json.loads(response.read().decode("utf-8"))
+    return _request(path, "POST", payload)
 
 
 spark_versions = db_get("/api/2.0/clusters/spark-versions").get("versions", [])
