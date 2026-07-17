@@ -15,10 +15,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Validate dispatch branch
+        run: |
+          set -euo pipefail
+
+          if [ "${GITHUB_REF_NAME}" != "main" ]; then
+            echo "This workflow must be run from the main branch. Selected branch: ${GITHUB_REF_NAME}" >&2
+            exit 1
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: main
 
       - name: Configure Git identity
         run: |
