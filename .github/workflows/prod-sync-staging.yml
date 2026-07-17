@@ -1,0 +1,56 @@
+name: Sync staging into prod
+
+"on":
+  workflow_dispatch:
+
+concurrency:
+  group: prod-branch-mutations
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  sync-staging-into-prod:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate dispatch branch
+        run: |
+          set -euo pipefail
+
+          if [ "${GITHUB_REF_NAME}" != "staging" ]; then
+            echo "This workflow must be run from the staging branch. Selected branch: ${GITHUB_REF_NAME}" >&2
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: staging
+
+      - name: Configure Git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Ensure prod branch exists
+        run: |
+          set -euo pipefail
+          git fetch origin staging
+
+          if git ls-remote --exit-code --heads origin prod > /dev/null; then
+            echo "prod branch already exists"
+          else
+            git checkout -B prod origin/staging
+            git push origin prod
+          fi
+
+      - name: Merge staging into prod
+        run: |
+          set -euo pipefail
+          git fetch origin staging prod
+          git checkout -B prod origin/prod
+          git merge --no-ff --no-edit origin/staging
+          git push origin prod
