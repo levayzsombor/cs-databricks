@@ -1,6 +1,18 @@
 #!/usr/bin/env sh
 set -eu
 
+case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*)
+        echo "Skipping POSIX Docker wait on Windows host shell."
+        exit 0
+        ;;
+esac
+
+if [ -n "${WSL_DISTRO_NAME:-}" ] || grep -qi microsoft /proc/version 2>/dev/null; then
+    echo "Skipping POSIX Docker wait inside WSL-hosted Bash on Windows."
+    exit 0
+fi
+
 timeout_seconds=90
 start_time=$(date +%s)
 

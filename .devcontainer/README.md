@@ -13,6 +13,8 @@ The dev container config uses `initializeCommand` with OS-specific commands:
 - Windows: runs `.devcontainer/wait-for-docker.ps1`
 - Linux/macOS: runs `.devcontainer/wait-for-docker.sh`
 
+Some Dev Containers builds on Windows invoke the Bash entries as well. The Bash script detects Windows-hosted shells, including Git Bash and WSL Bash without Docker Desktop integration, and exits immediately so the PowerShell check remains the only active wait path on Windows.
+
 Each script:
 
 - Polls `docker version` until the server is reachable
