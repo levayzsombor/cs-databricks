@@ -18,7 +18,8 @@
 		"ghcr.io/devcontainers/features/git:1": {},
 		"ghcr.io/devcontainers/features/azure-cli:1": {},
 		"ghcr.io/devcontainers/features/copilot-cli:1": {},
-		"ghcr.io/devcontainers/features/node:2": {}
+		"ghcr.io/devcontainers/features/node:2": {},
+		"ghcr.io/devcontainers-extra/features/uv:1": {}
 	},
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
@@ -38,6 +39,7 @@
 				"ms-python.python",
 				"ms-python.vscode-pylance",
 				"charliermarsh.ruff",
+				"astral-sh.ty",
 				"ms-python.debugpy",
 				"ms-python.vscode-python-envs",
 				"ms-toolsai.jupyter",
@@ -52,7 +54,7 @@
 			"settings": {
 				"chat.agent.enabled": true,
 				"github.copilot.chat.webSearch.enabled": true,
-				"python.analysis.typeCheckingMode": "standard",
+				"python.analysis.typeCheckingMode": "off",
 				"ruff.nativeServer": "on",
 				"ruff.organizeImports": true,
 				"[python]": {
