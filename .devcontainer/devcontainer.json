@@ -4,6 +4,11 @@
 	"name": "Ubuntu",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
 	"image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+	"initializeCommand": {
+		"windows": "powershell -NoProfile -ExecutionPolicy Bypass -File .devcontainer/wait-for-docker.ps1",
+		"linux": "bash .devcontainer/wait-for-docker.sh",
+		"macOS": "bash .devcontainer/wait-for-docker.sh"
+	},
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	"features": {
