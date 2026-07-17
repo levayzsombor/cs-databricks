@@ -19,6 +19,9 @@
 		"ghcr.io/devcontainers/features/azure-cli:1": {},
 		"ghcr.io/devcontainers/features/copilot-cli:1": {},
 		"ghcr.io/devcontainers/features/node:2": {},
+		"ghcr.io/devcontainers-extra/features/shellcheck:1": {},
+		"ghcr.io/devcontainers-extra/features/shfmt:1": {},
+		"ghcr.io/devcontainers-extra/features/actionlint:1": {},
 		"ghcr.io/devcontainers-extra/features/uv:1": {}
 	},
 
@@ -36,6 +39,7 @@
 				"waderyan.gitblame",
 				"donjayamanne.githistory",
 				"redhat.vscode-yaml",
+				"timonwong.shellcheck",
 				"ms-python.python",
 				"ms-python.vscode-pylance",
 				"charliermarsh.ruff",

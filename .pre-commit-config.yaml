@@ -5,3 +5,29 @@ repos:
       - id: ruff
         args: [--fix]
       - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: shfmt
+        name: shfmt
+        entry: shfmt -w -i 2 -ci
+        language: system
+        types: [shell]
+
+      - id: shellcheck
+        name: shellcheck
+        entry: shellcheck -e SC1091
+        language: system
+        types: [shell]
+
+      - id: actionlint
+        name: actionlint
+        entry: actionlint
+        language: system
+        files: ^\.github/workflows/.*\.ya?ml$
+
+      - id: yamllint-azuredevops
+        name: yamllint (.azuredevops)
+        entry: yamllint -c .yamllint
+        language: system
+        files: ^\.azuredevops/.*\.ya?ml$

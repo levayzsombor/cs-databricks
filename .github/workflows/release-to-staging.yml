@@ -1,0 +1,82 @@
+name: "Merge release branch into staging"
+
+"on":
+  workflow_dispatch:
+    inputs:
+      source_branch:
+        description: Source branch to merge from
+        required: true
+        type: string
+
+concurrency:
+  group: "staging-branch-mutations"
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  validate-and-merge-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: "staging"
+
+      - name: Validate release source branch
+        env:
+          SOURCE_BRANCH: "${{ inputs.source_branch }}"
+        run: |
+          set -euo pipefail
+
+          target_branch="staging"
+
+          if [ -z "${SOURCE_BRANCH}" ]; then
+            echo "source_branch is required." >&2
+            exit 1
+          fi
+
+          if [ "${SOURCE_BRANCH}" = "${target_branch}" ]; then
+            echo "source_branch must be different from staging." >&2
+            exit 1
+          fi
+
+          git fetch origin "${SOURCE_BRANCH}" "${target_branch}" --tags
+
+          if ! git rev-parse --verify "origin/${SOURCE_BRANCH}" >/dev/null 2>&1; then
+            echo "Source branch '${SOURCE_BRANCH}' does not exist." >&2
+            exit 1
+          fi
+
+          if ! git rev-parse --verify "origin/${target_branch}" >/dev/null 2>&1; then
+            echo "Target branch '${target_branch}' does not exist." >&2
+            exit 1
+          fi
+
+          release_tags="$(git tag --points-at "origin/${SOURCE_BRANCH}" | grep 'release' || true)"
+          if [ -z "${release_tags}" ]; then
+            echo "Source branch '${SOURCE_BRANCH}' does not point at a Git tag containing 'release'." >&2
+            exit 1
+          fi
+
+          echo "Validated release tag(s) on ${SOURCE_BRANCH}:"
+          printf '%s\n' "${release_tags}"
+
+      - name: Configure Git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge source branch into staging
+        env:
+          SOURCE_BRANCH: "${{ inputs.source_branch }}"
+        run: |
+          set -euo pipefail
+
+          git fetch origin "${SOURCE_BRANCH}" staging
+          git checkout -B staging origin/staging
+          git merge --no-ff --no-edit "origin/${SOURCE_BRANCH}"
+          git push origin staging
