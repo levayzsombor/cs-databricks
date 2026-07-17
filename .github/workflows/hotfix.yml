@@ -1,0 +1,136 @@
+name: "Merge hotfix branch into target branch"
+
+"on":
+  workflow_dispatch:
+    inputs:
+      source_branch:
+        description: Source branch to merge from
+        required: true
+        type: string
+      target_branch:
+        description: Target branch to merge into
+        required: true
+        type: string
+
+concurrency:
+  group: "hotfix-${{ inputs.target_branch }}-mutations"
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  validate-and-merge-hotfix:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate hotfix source branch
+        uses: actions/github-script@v7
+        env:
+          SOURCE_BRANCH: ${{ inputs.source_branch }}
+          TARGET_BRANCH: ${{ inputs.target_branch }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const sourceBranch = process.env.SOURCE_BRANCH;
+            const targetBranch = process.env.TARGET_BRANCH;
+
+            if (!sourceBranch || !targetBranch) {
+              core.setFailed('source_branch and target_branch are required.');
+              return;
+            }
+
+            if (sourceBranch === targetBranch) {
+              core.setFailed('source_branch and target_branch must be different.');
+              return;
+            }
+
+            const { data: branch } = await github.rest.repos.getBranch({
+              owner,
+              repo,
+              branch: sourceBranch,
+            }).catch(() => ({ data: null }));
+
+            if (!branch) {
+              core.setFailed(`Source branch '${sourceBranch}' does not exist.`);
+              return;
+            }
+
+            const { data: target } = await github.rest.repos.getBranch({
+              owner,
+              repo,
+              branch: targetBranch,
+            }).catch(() => ({ data: null }));
+
+            if (!target) {
+              core.setFailed(`Target branch '${targetBranch}' does not exist.`);
+              return;
+            }
+
+            const prs = await github.paginate(github.rest.pulls.list, {
+              owner,
+              repo,
+              state: 'open',
+              head: `${owner}:${sourceBranch}`,
+              per_page: 100,
+            });
+
+            const hotfixPr = prs.find((pr) =>
+              pr.labels.some((label) => label.name.toLowerCase() === 'hotfix'),
+            );
+
+            if (!hotfixPr) {
+              core.setFailed(`Branch '${sourceBranch}' does not have an open PR labeled hotfix.`);
+              return;
+            }
+
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner,
+              repo,
+              pull_number: hotfixPr.number,
+              per_page: 100,
+            });
+
+            const latestByUser = new Map();
+            for (const review of reviews) {
+              latestByUser.set(review.user.login, review.state);
+            }
+
+            const hasBlockingChangeRequest = [...latestByUser.values()].includes('CHANGES_REQUESTED');
+            const approvalCount = [...latestByUser.values()].filter((state) => state === 'APPROVED').length;
+
+            if (hasBlockingChangeRequest) {
+              core.setFailed(`PR #${hotfixPr.number} has an active CHANGES_REQUESTED review.`);
+              return;
+            }
+
+            if (approvalCount < 1) {
+              core.setFailed(`PR #${hotfixPr.number} must have at least one approval.`);
+              return;
+            }
+
+            core.info(`Validated hotfix PR #${hotfixPr.number} from ${sourceBranch} to merge into ${targetBranch}.`);
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: "${{ inputs.target_branch }}"
+
+      - name: Configure Git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge source branch into target branch
+        env:
+          SOURCE_BRANCH: ${{ inputs.source_branch }}
+          TARGET_BRANCH: ${{ inputs.target_branch }}
+        run: |
+          set -euo pipefail
+
+          git fetch origin "${SOURCE_BRANCH}" "${TARGET_BRANCH}"
+          git checkout -B "${TARGET_BRANCH}" "origin/${TARGET_BRANCH}"
+          git merge --no-ff --no-edit "origin/${SOURCE_BRANCH}"
+          git push origin "${TARGET_BRANCH}"
