@@ -19,7 +19,7 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Install Azure DevOps extension
-        run: az extension add --name azure-devops --yes
+        run: bash .github/workflows/scripts/main-merge-sync/install-azure-devops-extension.sh
 
       - name: Ensure Azure DevOps pipeline exists
         env:
@@ -29,36 +29,11 @@ jobs:
           AZDO_GITHUB_SERVICE_CONNECTION: ${{ secrets.AZDO_GITHUB_SERVICE_CONNECTION }}
           PIPELINE_NAME: cs-databricks-dev-sync
           PIPELINE_YAML_PATH: .azuredevops/pipelines/cs-databricks-dev-sync.yml
-        run: |
-          set -euo pipefail
-
-          az devops configure --defaults organization="$AZDO_ORG_URL" project="$AZDO_PROJECT"
-
-          pipeline_id=$(az pipelines list --query "[?name=='${PIPELINE_NAME}'].id | [0]" -o tsv)
-
-          if [ -z "${pipeline_id}" ]; then
-            echo "Creating Azure DevOps pipeline: ${PIPELINE_NAME}"
-            pipeline_id=$(az pipelines create \
-              --name "${PIPELINE_NAME}" \
-              --repository "${GITHUB_REPOSITORY}" \
-              --repository-type github \
-              --branch main \
-              --yml-path "${PIPELINE_YAML_PATH}" \
-              --service-connection "${AZDO_GITHUB_SERVICE_CONNECTION}" \
-              --skip-first-run true \
-              --query id \
-              -o tsv)
-          fi
-
-          echo "PIPELINE_ID=${pipeline_id}" >> "$GITHUB_ENV"
+        run: bash .github/workflows/scripts/main-merge-sync/ensure-azdo-pipeline.sh
 
       - name: Run Azure DevOps pipeline
         env:
           AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZDO_PAT }}
           AZDO_ORG_URL: ${{ secrets.AZDO_ORG_URL }}
           AZDO_PROJECT: ${{ secrets.AZDO_PROJECT }}
-        run: |
-          set -euo pipefail
-
-          az devops configure --defaults organization="$AZDO_ORG_URL" project="$AZDO_PROJECT"
-          az pipelines run --id "$PIPELINE_ID" --branch main
+        run: bash .github/workflows/scripts/main-merge-sync/run-azdo-pipeline.sh

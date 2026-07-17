@@ -1,0 +1,52 @@
+name: "Create release branch from feature tags"
+
+"on":
+  workflow_dispatch:
+    inputs:
+      feature_tags:
+        description: "Comma-separated git tags (e.g. feature-a,feature-b)"
+        required: true
+        type: string
+
+concurrency:
+  group: "release-branch-mutations"
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  create-release-branch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git identity
+        run: bash .github/workflows/scripts/common/configure-git.sh
+
+      - name: Validate tags and branch safety
+        id: validate
+        env:
+          FEATURE_TAGS: "${{ inputs.feature_tags }}"
+        run: bash .github/workflows/scripts/create-release/validate-feature-tags.sh
+
+      - name: Resolve PR branches for tags
+        id: resolve_pr_branches
+        uses: actions/github-script@v7
+        env:
+          TAGS_CSV: "${{ steps.validate.outputs.tags_csv }}"
+        with:
+          script: |
+            const resolveBranches = require('./.github/workflows/scripts/create-release/resolve-pr-branches.cjs');
+            await resolveBranches({ github, context, core });
+
+      - name: Create and populate release branch
+        id: create_release
+        env:
+          PR_BRANCHES: "${{ steps.resolve_pr_branches.outputs.branches_csv }}"
+        run: bash .github/workflows/scripts/create-release/create-populate-release-branch.sh

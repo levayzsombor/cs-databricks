@@ -16,13 +16,7 @@ jobs:
 
     steps:
       - name: Validate dispatch branch
-        run: |
-          set -euo pipefail
-
-          if [ "${GITHUB_REF_NAME}" != "main" ]; then
-            echo "This workflow must be run from the main branch. Selected branch: ${GITHUB_REF_NAME}" >&2
-            exit 1
-          fi
+        run: bash .github/workflows/scripts/common/validate-dispatch-branch.sh main
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -31,26 +25,10 @@ jobs:
           ref: main
 
       - name: Configure Git identity
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        run: bash .github/workflows/scripts/common/configure-git.sh
 
       - name: Ensure ua branch exists
-        run: |
-          set -euo pipefail
-          git fetch origin main
-
-          if git ls-remote --exit-code --heads origin ua > /dev/null; then
-            echo "ua branch already exists"
-          else
-            git checkout -B ua origin/main
-            git push origin ua
-          fi
+        run: bash .github/workflows/scripts/ua-sync-main/ensure-ua-branch.sh
 
       - name: Merge main into ua
-        run: |
-          set -euo pipefail
-          git fetch origin main ua
-          git checkout -B ua origin/ua
-          git merge --no-ff --no-edit origin/main
-          git push origin ua
+        run: bash .github/workflows/scripts/ua-sync-main/merge-main-into-ua.sh

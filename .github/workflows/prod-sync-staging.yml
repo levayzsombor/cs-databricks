@@ -16,13 +16,7 @@ jobs:
 
     steps:
       - name: Validate dispatch branch
-        run: |
-          set -euo pipefail
-
-          if [ "${GITHUB_REF_NAME}" != "staging" ]; then
-            echo "This workflow must be run from the staging branch. Selected branch: ${GITHUB_REF_NAME}" >&2
-            exit 1
-          fi
+        run: bash .github/workflows/scripts/common/validate-dispatch-branch.sh staging
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -31,26 +25,10 @@ jobs:
           ref: staging
 
       - name: Configure Git identity
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        run: bash .github/workflows/scripts/common/configure-git.sh
 
       - name: Ensure prod branch exists
-        run: |
-          set -euo pipefail
-          git fetch origin staging
-
-          if git ls-remote --exit-code --heads origin prod > /dev/null; then
-            echo "prod branch already exists"
-          else
-            git checkout -B prod origin/staging
-            git push origin prod
-          fi
+        run: bash .github/workflows/scripts/prod-sync-staging/ensure-prod-branch.sh
 
       - name: Merge staging into prod
-        run: |
-          set -euo pipefail
-          git fetch origin staging prod
-          git checkout -B prod origin/prod
-          git merge --no-ff --no-edit origin/staging
-          git push origin prod
+        run: bash .github/workflows/scripts/prod-sync-staging/merge-staging-into-prod.sh
