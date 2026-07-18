@@ -6,7 +6,6 @@ cd /workspaces/cs-databricks
 python3 -m venv .venv
 # shellcheck source=/dev/null
 source .venv/bin/activate
-uv self update
-uv pip install -r requirements-dev.txt
+python -m pip install --upgrade pip
+python -m pip install -r requirements-dev.txt
 npm i
-

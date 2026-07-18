@@ -28,9 +28,42 @@ This will make sure that everyone works from the same setup if they chose to do 
 1. Git
 2. Azure-CLI
 3. Copilot-CLI
-4. Node
-5. Shellcheck
-6. shfmt
-7. actionlint
-8. uv
-9. yamlfmt
+4. Node : for Eslint and Prettier
+5. Shellcheck : for shell linting
+6. shfmt: for shell formatting
+7. actionlint: for github actions linting
+8. yamlfmt: for yaml formatting
+
+### Installed extensions:
+
+1. Git graph: a visual helper for git branches
+2. Git blame: can see inline the last change
+3. Git History: an easy visual way to check file and commit history
+4. YAML: yaml language support
+5. Ruff: Python linter and formatter while coding
+6. TY: Python type checker while coding
+7. Jupyter: for notebooks
+8. EchoAPI: Postman like Rest API program
+9. Databricks: Connect to a databricks environment
+10. GitHub Actions: see the GHA running on the repo
+11. GitHub Pull Request: create and handle pull requests in VS Code
+12. GitHub repositories: Browse GitHub repos without checkout
+13. GitHub Copilot: enable copilot inside the container
+14. GitHub Copilot chat: chat window for Copilot
+15. GitHub Actions (YAML): YAML schema validation
+16. Prettier: default formatter (python, and shell not included)
+17. Bash IDE: shell script linting and formatting while coding
+18. Code Spell Checker: Spell checking for for .MD files and strings
+19. Markdown Editor: Helps editing .MD files in a Preview format (Right-click edit with markdown editor)
+
+## Git Branching strategy and deployment
+
+Git branching strategies combining Git Rules ( for branches and tags ), GitHub Actions and Permissions help create an orderly merge for code making sure the protected branched have their intended version of the code.
+With the same GitHub Actions the Deployment and updates of the Azure applications can be started to make it automatic.
+
+### Git Branches:
+
+1. PR branch:
+   - Any branch can be merged into it.
+   - Can only merge to the 'main' protected branch
+   - Needs a pull request

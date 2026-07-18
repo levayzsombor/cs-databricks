@@ -22,7 +22,6 @@
     "ghcr.io/devcontainers-extra/features/shellcheck:1": {},
     "ghcr.io/devcontainers-extra/features/shfmt:1": {},
     "ghcr.io/devcontainers-extra/features/actionlint:1": {},
-    "ghcr.io/devcontainers-extra/features/uv:1": {},
     "ghcr.io/lentzi90/features/yamlfmt:0": {}
   },
 
@@ -79,6 +78,8 @@
         "ruff.organizeImports": true,
         "editor.defaultFormatter": "esbenp.prettier-vscode",
         "editor.formatOnSave": true,
+        "editor.formatOnPaste": false,
+        "editor.formatOnType": false,
         "[python]": {
           "editor.defaultFormatter": "charliermarsh.ruff"
         },
