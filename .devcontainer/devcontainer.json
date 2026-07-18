@@ -53,7 +53,8 @@
 				"GitHub.vscode-pull-request-github",
 				"GitHub.remotehub",
 				"GitHub.copilot",
-				"GitHub.copilot-chat"
+				"GitHub.copilot-chat",
+				"me-dutour-mathieu.vscode-github-actions"
 			],
 			"settings": {
 				"chat.agent.enabled": true,
