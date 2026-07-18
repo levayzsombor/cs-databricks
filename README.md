@@ -61,9 +61,50 @@ This will make sure that everyone works from the same setup if they chose to do 
 Git branching strategies combining Git Rules ( for branches and tags ), GitHub Actions and Permissions help create an orderly merge for code making sure the protected branched have their intended version of the code.
 With the same GitHub Actions the Deployment and updates of the Azure applications can be started to make it automatic.
 
+The basic idea is to have 5 protected branches: main (default), ua, staging, prod as permanent branches and pre-release ephemeral branch. merges into these branches are with strict rules and uses tags on commits to track features and versions.
+
+**hot fix** branches can be created that can merge into the **ua**, **pre-release** and **staging** branch with a PR (and senior approval). At the commit hash a _**hot fix**_ tag is created.
+
+Development happens in **PR branches** that create _**tag**_ at the commit hash when merging to see what feature its part of ex: tag: _**feature-import-update**_. This code merge into **main** where it's together with the other improvements and tested. GitHub Action automatically updates the **DEV** Azure application with the code. It can only merge into **main** and **pre-release**.
+
+When **main** is ready it merges with a PR into **ua** (user acceptance) with a PR that provides a list of all the _**feature**_ tags that is included in it. GitHub Action updates the **UA** Azure application automatically with the new code.
+
+After user acceptance is done the approved _**features**_ and _**hot fixes**_ all merge into a **pre-release** branch via a GitHub action. A pre release PR is created that has an incrementing _**version-alpha**_ tag ex: _**version-1.0.5-alpha**_ that merged into the **staging** branch.
+
+This **staging** branch have a chance to be broken since not all the code from **main** was merged into it, if there were _**features**_ excluded. This can be repaired and run in the staging environment until the tests pass with the new PR. Since its separated from **main** development can continue on **main** while the validation is ongoing. All repos go with the same _**version**_ so staging check can only pass if all the repositories are on the same _**version**_. If a repository doesn't need new code for the version the _**version**_ tag is added next to the old one.
+
+After this a release PR is created from **staging** with the _**version**_ tag (alpha removed) that lists all _**feature**_ tags and **hot fixes** that was included, and merge into the **prod** protected branch. GitHub action automatically updates the inactive **PROD** Azure application. In Blue - Green deployment there is an active **PROD** application and an inactive one. Since its cloud the inactive doesn't cost resources. When the inactive **PROD** application activates Users can test it to their needs. if accepted it takes on the main **PROD** application role and the old version goes inactive (can be started up if there is an issue with the new one). After this a PR is created from the _**version**_ tag and merged with a PR into main updating the version number and realigning it with the hot fixes made before.
+
 ### Git Branches:
 
 1. PR branch:
-   - Any branch can be merged into it.
-   - Can only merge to the 'main' protected branch
-   - Needs a pull request
+   - Any branch can be merged into it
+   - Can only merge to the **main** protected branch with a PR
+   - Needs a _**feature-(name)**_ tag to merge
+
+2. Hot fix branch:
+   - Any branch can merge into it
+   - Can only merge into **ua**, **pre-release** and **staging** protected branch with a PR
+   - Needs a _**hotfix-(name)**_ tag to merge
+
+3. Main branch (default, protected):
+   - Only **PR** and **prod** branches can merge into it
+   - Can only merge into **ua** protected branch with a PR
+
+4. Ua branch (user acceptance, protected)
+   - Only **main** and **hot-fix** branches can merge into it
+   - Can't merge into anything
+
+5. Pre-release branch (protected):
+   - Only **PR** and **hot-fix** branches can merge into it
+   - Can only merge into **staging** protected branch with a PR
+   - Needs a _**version-(number)-alpha**_ tag to merge
+
+6. Staging branch (protected):
+   - Only **pre-release** and **hot-fix** branches can merge into it
+   - Can only merge into **prod** protected branch with a PR
+   - Needs a _**version-(number)**_ tag to merge
+
+7. Prod branch (protected):
+   - Only **staging** branch can merge into it
+   - Can only merge into **main** protected branch with a PR
