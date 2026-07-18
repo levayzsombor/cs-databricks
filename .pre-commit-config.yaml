@@ -32,8 +32,10 @@ repos:
         language: system
         files: ^.*\.ya?ml$
 
-      - id: yamlfmt
-        name: yamlfmt
-        entry: yamlfmt -w
-        language: system
-        files: ^.*\.ya?ml$
+      - id: eslint
+        name: eslint
+        entry: npx eslint --fix
+
+      - id: prettier
+        name: prettier
+        entry: npx prettier --write

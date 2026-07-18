@@ -1,0 +1,6 @@
+node_modules/
+.venv/
+.databricks/
+.ruff_cache/
+notebooks/**/*.ipynb
+notebooks/outputs/

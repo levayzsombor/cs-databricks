@@ -1,7 +1,9 @@
 
 .databricks
 .ruff_cache
-.vscode/
+node_modules
+.env
+.vscode
 .venv/
 __pycache__/
 *.py[cod]

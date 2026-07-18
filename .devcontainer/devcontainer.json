@@ -56,7 +56,9 @@
 				"GitHub.copilot",
 				"GitHub.copilot-chat",
 				"me-dutour-mathieu.vscode-github-actions",
-				"muhammad-ahmad.xlsx-viewer"
+				"muhammad-ahmad.xlsx-viewer",
+				"esbenp.prettier-vscode",
+				"mads-hartmann.bash-ide-vscode"
 			],
 			"settings": {
 				"chat.agent.enabled": true,
@@ -64,9 +66,15 @@
 				"python.analysis.typeCheckingMode": "off",
 				"ruff.nativeServer": "on",
 				"ruff.organizeImports": true,
+				"editor.defaultFormatter": "esbenp.prettier-vscode",
+				"editor.formatOnSave": true,
 				"[python]": {
-					"editor.formatOnSave": true
-				}
+					"editor.defaultFormatter": "charliermarsh.ruff"
+				},
+				"[shellscript]": {
+					"files.eol": "\n",
+					"editor.defaultFormatter": "mads-hartmann.bash-ide-vscode"
+				}         
 			}
 		}
 	}
