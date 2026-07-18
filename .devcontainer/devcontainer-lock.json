@@ -44,6 +44,11 @@
       "version": "1.8.0",
       "resolved": "ghcr.io/devcontainers/features/python@sha256:fbcad6955caeecc5ad3f7886baf652e25cba5225a6c4c2287c536de2e5607511",
       "integrity": "sha256:fbcad6955caeecc5ad3f7886baf652e25cba5225a6c4c2287c536de2e5607511"
+    },
+    "ghcr.io/lentzi90/features/yamlfmt:0": {
+      "version": "0.1.0",
+      "resolved": "ghcr.io/lentzi90/features/yamlfmt@sha256:3ca87d0e0add663bc9be21af781fa77cb0774775a9824573227c05beccbfc5bb",
+      "integrity": "sha256:3ca87d0e0add663bc9be21af781fa77cb0774775a9824573227c05beccbfc5bb"
     }
   }
 }
