@@ -1,4 +1,4 @@
-name: Sync main to Azure Databricks dev
+name: Merge to main
 
 on:
   push:
@@ -15,6 +15,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Get tags and hash
+        id: get-tags
+        run: bash .github/workflows/scripts/common/get-tags.sh
+
+      - name: Validate tags
+        run: bash .github/workflows/scripts/common/validate-tags.sh
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -22,7 +32,7 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Install Azure DevOps extension
-        run: bash .github/workflows/scripts/main-merge-sync/install-azure-devops-extension.sh
+        run: bash .github/workflows/scripts/azure/install-azure-devops-extension.sh
 
       - name: Ensure Azure DevOps pipeline exists
         env:
@@ -32,11 +42,11 @@ jobs:
           AZDO_GITHUB_SERVICE_CONNECTION: ${{ secrets.AZDO_GITHUB_SERVICE_CONNECTION }}
           PIPELINE_NAME: cs-databricks-dev-sync
           PIPELINE_YAML_PATH: .azuredevops/pipelines/cs-databricks-dev-sync.yml
-        run: bash .github/workflows/scripts/main-merge-sync/ensure-azdo-pipeline.sh
+        run: bash .github/workflows/scripts/azure/ensure-azdo-pipeline.sh
 
       - name: Run Azure DevOps pipeline
         env:
           AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZDO_PAT }}
           AZDO_ORG_URL: ${{ secrets.AZDO_ORG_URL }}
           AZDO_PROJECT: ${{ secrets.AZDO_PROJECT }}
-        run: bash .github/workflows/scripts/main-merge-sync/run-azdo-pipeline.sh
+        run: bash .github/workflows/scripts/azure/run-azdo-pipeline.sh

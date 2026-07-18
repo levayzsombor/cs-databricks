@@ -26,8 +26,14 @@ repos:
         language: system
         files: ^\.github/workflows/.*\.ya?ml$
 
-      - id: yamllint-azuredevops
-        name: yamllint (.azuredevops)
+      - id: yamllint
+        name: yamllint
         entry: yamllint -c .yamllint
         language: system
-        files: ^\.azuredevops/.*\.ya?ml$
+        files: ^.*\.ya?ml$
+
+      - id: yamlfmt
+        name: yamlfmt
+        entry: yamlfmt -w
+        language: system
+        files: ^.*\.ya?ml$

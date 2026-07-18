@@ -22,7 +22,8 @@
 		"ghcr.io/devcontainers-extra/features/shellcheck:1": {},
 		"ghcr.io/devcontainers-extra/features/shfmt:1": {},
 		"ghcr.io/devcontainers-extra/features/actionlint:1": {},
-		"ghcr.io/devcontainers-extra/features/uv:1": {}
+		"ghcr.io/devcontainers-extra/features/uv:1": {},
+		"ghcr.io/lentzi90/features/yamlfmt:0": {}
 	},
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
@@ -54,7 +55,8 @@
 				"GitHub.remotehub",
 				"GitHub.copilot",
 				"GitHub.copilot-chat",
-				"me-dutour-mathieu.vscode-github-actions"
+				"me-dutour-mathieu.vscode-github-actions",
+				"muhammad-ahmad.xlsx-viewer"
 			],
 			"settings": {
 				"chat.agent.enabled": true,
