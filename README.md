@@ -69,7 +69,7 @@ Development happens in **feature branches** that create _**tag**_ at the commit 
 
 When **main** is ready it merges with a PR into **ua** (user acceptance) with a PR that provides a list of all the _**feature**_ tags that is included in it. GitHub Action updates the **UA** Azure application automatically with the new code.
 
-After user acceptance is done the approved _**features**_ and _**hot fixes**_ all merge into a **pre-release** branch via a GitHub action. A pre release PR is created that has an incrementing _**version-alpha**_ tag ex: _**version-1.0.5-alpha**_ that merged into the **staging** branch.
+After user acceptance is done the approved _**features**_ and _**hot fixes**_ all merge into a **pre-release** branch its base being the last _**version**_ tag (where **prod** merged back into **main**) via a GitHub action. A pre-release PR is created that has an incrementing _**version-alpha**_ tag ex: _**version-1.0.5-alpha**_ that is merged into the **staging** branch. This is automated by a GitHub Action.
 
 This **staging** branch have a chance to be broken since not all the code from **main** was merged into it, if there were _**features**_ excluded. This can be repaired and run in the staging environment until the tests pass with the new PR. Since its separated from **main** development can continue on **main** while the validation is ongoing. All repos go with the same _**version**_ so staging check can only pass if all the repositories are on the same _**version**_. If a repository doesn't need new code for the version the _**version**_ tag is added next to the old one.
 
@@ -77,12 +77,15 @@ After this a release PR is created from **staging** with the _**version**_ tag (
 
 ### Git Branches:
 
-1. Feature branch:
+Protected means a PR is needed in order to merge into the branch.
+a Squash merge is recommended for all branches by default
+
+1. Feature branch (not protected):
    - Any branch can be merged into it
    - Can only merge to the **main** protected branch with a PR
    - Needs a _**feature-(name)**_ tag to merge
 
-2. Hot fix branch:
+2. Hot fix branch (not protected):
    - Any branch can merge into it
    - Can only merge into **ua**, **pre-release** and **staging** protected branch with a PR
    - Needs a _**hotfix-(name)**_ tag to merge
@@ -95,8 +98,9 @@ After this a release PR is created from **staging** with the _**version**_ tag (
    - Only **main** and **hot-fix** branches can merge into it
    - Can't merge into anything
 
-5. Pre-release branch (protected):
+5. Pre-release branch (not protected):
    - Only **feature** and **hot-fix** branches can merge into it
+   - Has a pre-push check that blocks all code changes if its not coming from a **feature**  or **hot-fix** branch
    - Can only merge into **staging** protected branch with a PR
    - Needs a _**version-(number)-alpha**_ tag to merge
 
