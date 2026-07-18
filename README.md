@@ -17,6 +17,7 @@ This will make sure that everyone works from the same setup if they chose to do 
 1.  download Git: [https://git-scm.com/install/](https://git-scm.com/install/)
 2.  download VS Code: [https://code.visualstudio.com/download](https://code.visualstudio.com/download)
 3.  download Docker Desktop (or just simple docker CLI) : [https://docs.docker.com/desktop/setup/install/windows-install/](https://docs.docker.com/desktop/setup/install/windows-install/)
-4.  If Windows is used download WSL:   code wsl --install
+4.  If Windows is used download WSL:   wsl --install  
+    
 5.  open VS Code
 6.  Download this repository: [https://github.com/levayzsombor/cs-databricks](https://github.com/levayzsombor/cs-databricks)
