@@ -71,6 +71,7 @@
           "/\\b[A-Z][a-z0-9]+(?:[A-Z][a-z0-9]+)+\\b/g",
           "/\\b[A-Z]+(?:_[A-Z0-9]+)+\\b/g"
         ],
+        "markdown-editor.defaultOpenOutline": true,
         "chat.agent.enabled": true,
         "github.copilot.chat.webSearch.enabled": true,
         "python.analysis.typeCheckingMode": "off",

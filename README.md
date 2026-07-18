@@ -14,21 +14,23 @@ This will make sure that everyone works from the same setup if they chose to do 
 
 ### Install guide:
 
-1.  download  and install Git: [https://git-scm.com/install/](https://git-scm.com/install/)
-    
-2.  download and install VS Code: [https://code.visualstudio.com/download](https://code.visualstudio.com/download)
-    
-3.  download and install Docker Desktop (or just simple docker CLI) : [https://docs.docker.com/desktop/setup/install/windows-install/](https://docs.docker.com/desktop/setup/install/windows-install/)
-    
-4.  If Windows is used install WSL powershell:  `wsl --install`
-    
-5.  open VS Code
-    
-6.  Download this repository: [https://github.com/levayzsombor/cs-databricks](https://github.com/levayzsombor/cs-databricks)
-    
-7.  Add the Dev Containers extension to VS Code: ms-vscode-remote.remote-containers
-    
-8.  Either click on the pop-up to start the container or ctrl + shift + P -> Dev containers: Rebuild and Reload container
-    
+1. download  and install Git: [https://git-scm.com/install/](https://git-scm.com/install/)
+2. download and install VS Code: [https://code.visualstudio.com/download](https://code.visualstudio.com/download)
+3. download and install Docker Desktop (or just simple docker CLI) : [https://docs.docker.com/desktop/setup/install/windows-install/](https://docs.docker.com/desktop/setup/install/windows-install/)
+4. If Windows is used install WSL powershell:  `wsl --install`
+5. open VS Code
+6. Download this repository: [https://github.com/levayzsombor/cs-databricks](https://github.com/levayzsombor/cs-databricks)
+7. Add the Dev Containers extension to VS Code: ms-vscode-remote.remote-containers
+8. Either click on the pop-up to start the container or ctrl + shift + P -> Dev containers: Rebuild and Reload container
 
-### installed programs:
+### Installed programs:
+
+1. Git
+2. Azure-CLI
+3. Copilot-CLI
+4. Node
+5. Shellcheck
+6. shfmt
+7. actionlint
+8. uv
+9. yamlfmt
