@@ -58,7 +58,8 @@
 				"me-dutour-mathieu.vscode-github-actions",
 				"muhammad-ahmad.xlsx-viewer",
 				"esbenp.prettier-vscode",
-				"mads-hartmann.bash-ide-vscode"
+				"mads-hartmann.bash-ide-vscode",
+				"streetsidesoftware.code-spell-checker"
 			],
 			"settings": {
 				"chat.agent.enabled": true,

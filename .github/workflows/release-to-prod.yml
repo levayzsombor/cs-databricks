@@ -19,6 +19,9 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
+      - name: Check source branch name
+        run: bash .github/workflows/scripts/common/check-source-branch-name.sh 
+
       - name: Get tags and hash
         id: get-tags
         run: bash .github/workflows/scripts/common/get-tags.sh

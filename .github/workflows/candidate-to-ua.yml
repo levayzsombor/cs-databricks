@@ -19,6 +19,9 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
+      - name: Check source branch name
+        run: bash .github/workflows/scripts/common/check-source-branch-name.sh  
+
       - name: Get tags and hash
         id: get-tags
         run: bash .github/workflows/scripts/common/get-tags.sh
@@ -42,11 +45,11 @@ jobs:
           AZDO_GITHUB_SERVICE_CONNECTION: ${{ secrets.AZDO_GITHUB_SERVICE_CONNECTION }}
           PIPELINE_NAME: cs-databricks-ua-sync
           PIPELINE_YAML_PATH: .azuredevops/pipelines/cs-databricks-ua-sync.yml
-        run: bash echo TODO Implement ensure-azdo-pipeline.sh for ua
+        run: bash .github/workflows/scripts/azure/ensure-azdo-pipeline.sh
 
       - name: Run Azure DevOps pipeline
         env:
           AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZDO_PAT }}
           AZDO_ORG_URL: ${{ secrets.AZDO_ORG_URL }}
           AZDO_PROJECT: ${{ secrets.AZDO_PROJECT }}
-        run: bash echo TODO Implement run-azdo-pipeline.sh for ua
+        run: bash .github/workflows/scripts/azure/run-azdo-pipeline.sh
