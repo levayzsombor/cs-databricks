@@ -65,7 +65,7 @@ The basic idea is to have 5 protected branches: main (default), ua, staging, pro
 
 **hot fix** branches can be created that can merge into the **ua**, **pre-release** and **staging** branch with a PR (and senior approval). At the commit hash a _**hot fix**_ tag is created.
 
-Development happens in **PR branches** that create _**tag**_ at the commit hash when merging to see what feature its part of ex: tag: _**feature-import-update**_. This code merge into **main** where it's together with the other improvements and tested. GitHub Action automatically updates the **DEV** Azure application with the code. It can only merge into **main** and **pre-release**.
+Development happens in **feature branches** that create _**tag**_ at the commit hash when merging to see what feature its part of ex: tag: _**feature-import-update**_. This code merge into **main** where it's together with the other improvements and tested. GitHub Action automatically updates the **DEV** Azure application with the code. It can only merge into **main** and **pre-release**.
 
 When **main** is ready it merges with a PR into **ua** (user acceptance) with a PR that provides a list of all the _**feature**_ tags that is included in it. GitHub Action updates the **UA** Azure application automatically with the new code.
 
@@ -77,7 +77,7 @@ After this a release PR is created from **staging** with the _**version**_ tag (
 
 ### Git Branches:
 
-1. PR branch:
+1. Feature branch:
    - Any branch can be merged into it
    - Can only merge to the **main** protected branch with a PR
    - Needs a _**feature-(name)**_ tag to merge
@@ -88,7 +88,7 @@ After this a release PR is created from **staging** with the _**version**_ tag (
    - Needs a _**hotfix-(name)**_ tag to merge
 
 3. Main branch (default, protected):
-   - Only **PR** and **prod** branches can merge into it
+   - Only **feature** and **prod** branches can merge into it
    - Can only merge into **ua** protected branch with a PR
 
 4. Ua branch (user acceptance, protected)
@@ -96,7 +96,7 @@ After this a release PR is created from **staging** with the _**version**_ tag (
    - Can't merge into anything
 
 5. Pre-release branch (protected):
-   - Only **PR** and **hot-fix** branches can merge into it
+   - Only **feature** and **hot-fix** branches can merge into it
    - Can only merge into **staging** protected branch with a PR
    - Needs a _**version-(number)-alpha**_ tag to merge
 
@@ -108,3 +108,25 @@ After this a release PR is created from **staging** with the _**version**_ tag (
 7. Prod branch (protected):
    - Only **staging** branch can merge into it
    - Can only merge into **main** protected branch with a PR
+
+
+### Environments:
+
+There are 5 environments that maintain a Databricks Azure Application. Since the code only needs to be pulled into the application no deployment is needed unless the application is dormant.
+
+1. Dev
+   - The **main**, **feature**, and **hot-fix** branches can be here
+
+2. UA
+   - **ua** branch is here
+
+3. Staging
+   - **staging** branch is here
+
+4. Prod (Blue)
+   - **prod** current version is here
+
+5. Prod (Green)
+   - **prod** old version is here
+   - dormant
+   - can be updated with a newer **prod** version
