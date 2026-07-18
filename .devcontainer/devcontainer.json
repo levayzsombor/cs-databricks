@@ -1,85 +1,94 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/alpine
 {
-	"name": "Ubuntu",
-	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
-	"initializeCommand": {
-		"windows": "powershell -NoProfile -ExecutionPolicy Bypass -File .devcontainer/wait-for-docker.ps1",
-		"linux": "bash .devcontainer/wait-for-docker.sh",
-		"macOS": "bash .devcontainer/wait-for-docker.sh"
-	},
+  "name": "Ubuntu",
+  // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "initializeCommand": {
+    "windows": "powershell -NoProfile -ExecutionPolicy Bypass -File .devcontainer/wait-for-docker.ps1",
+    "linux": "bash .devcontainer/wait-for-docker.sh",
+    "macOS": "bash .devcontainer/wait-for-docker.sh"
+  },
 
-	// Features to add to the dev container. More info: https://containers.dev/features.
-	"features": {
-		"ghcr.io/devcontainers/features/python:1": {
-			"version": "3.12"
-		},
-		"ghcr.io/devcontainers/features/git:1": {},
-		"ghcr.io/devcontainers/features/azure-cli:1": {},
-		"ghcr.io/devcontainers/features/copilot-cli:1": {},
-		"ghcr.io/devcontainers/features/node:2": {},
-		"ghcr.io/devcontainers-extra/features/shellcheck:1": {},
-		"ghcr.io/devcontainers-extra/features/shfmt:1": {},
-		"ghcr.io/devcontainers-extra/features/actionlint:1": {},
-		"ghcr.io/devcontainers-extra/features/uv:1": {},
-		"ghcr.io/lentzi90/features/yamlfmt:0": {}
-	},
+  // Features to add to the dev container. More info: https://containers.dev/features.
+  "features": {
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.12"
+    },
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/azure-cli:1": {},
+    "ghcr.io/devcontainers/features/copilot-cli:1": {},
+    "ghcr.io/devcontainers/features/node:2": {},
+    "ghcr.io/devcontainers-extra/features/shellcheck:1": {},
+    "ghcr.io/devcontainers-extra/features/shfmt:1": {},
+    "ghcr.io/devcontainers-extra/features/actionlint:1": {},
+    "ghcr.io/devcontainers-extra/features/uv:1": {},
+    "ghcr.io/lentzi90/features/yamlfmt:0": {}
+  },
 
-	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [],
+  // Use 'forwardPorts' to make a list of ports inside the container available locally.
+  // "forwardPorts": [],
 
-	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "bash .devcontainer/post-create.sh",
+  // Use 'postCreateCommand' to run commands after the container is created.
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
 
-	// Configure tool-specific properties.
-	"customizations": {
-		"vscode": {
-			"extensions": [
-				"mhutchie.git-graph",
-				"waderyan.gitblame",
-				"donjayamanne.githistory",
-				"redhat.vscode-yaml",
-				"timonwong.shellcheck",
-				"ms-python.python",
-				"ms-python.vscode-pylance",
-				"charliermarsh.ruff",
-				"astral-sh.ty",
-				"ms-python.debugpy",
-				"ms-python.vscode-python-envs",
-				"ms-toolsai.jupyter",
-				"echoapi.echoapi-for-vscode",
-				"databricks.databricks",
-				"GitHub.vscode-github-actions",
-				"GitHub.vscode-pull-request-github",
-				"GitHub.remotehub",
-				"GitHub.copilot",
-				"GitHub.copilot-chat",
-				"me-dutour-mathieu.vscode-github-actions",
-				"muhammad-ahmad.xlsx-viewer",
-				"esbenp.prettier-vscode",
-				"mads-hartmann.bash-ide-vscode",
-				"streetsidesoftware.code-spell-checker"
-			],
-			"settings": {
-				"chat.agent.enabled": true,
-				"github.copilot.chat.webSearch.enabled": true,
-				"python.analysis.typeCheckingMode": "off",
-				"ruff.nativeServer": "on",
-				"ruff.organizeImports": true,
-				"editor.defaultFormatter": "esbenp.prettier-vscode",
-				"editor.formatOnSave": true,
-				"[python]": {
-					"editor.defaultFormatter": "charliermarsh.ruff"
-				},
-				"[shellscript]": {
-					"files.eol": "\n",
-					"editor.defaultFormatter": "mads-hartmann.bash-ide-vscode"
-				}         
-			}
-		}
-	}
+  // Configure tool-specific properties.
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "mhutchie.git-graph",
+        "waderyan.gitblame",
+        "donjayamanne.githistory",
+        "redhat.vscode-yaml",
+        "timonwong.shellcheck",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "charliermarsh.ruff",
+        "astral-sh.ty",
+        "ms-python.debugpy",
+        "ms-python.vscode-python-envs",
+        "ms-toolsai.jupyter",
+        "echoapi.echoapi-for-vscode",
+        "databricks.databricks",
+        "GitHub.vscode-github-actions",
+        "GitHub.vscode-pull-request-github",
+        "GitHub.remotehub",
+        "GitHub.copilot",
+        "GitHub.copilot-chat",
+        "me-dutour-mathieu.vscode-github-actions",
+        "esbenp.prettier-vscode",
+        "mads-hartmann.bash-ide-vscode",
+        "streetsidesoftware.code-spell-checker",
+        "zaaack.markdown-editor"
+      ],
+      "settings": {
+        "cSpell.ignoreRandomStrings": true,
+        "cSpell.ignoreRegExpList": [
+          "string",
+          "/\\b[a-z]+(?:-[a-z0-9]+)+\\b/g",
+          "/\\b[a-z]+(?:_[a-z0-9]+)+\\b/g",
+          "/\\b[a-z]+(?:[A-Z][a-z0-9]+)+\\b/g",
+          "/\\b[A-Z][a-z0-9]+(?:[A-Z][a-z0-9]+)+\\b/g",
+          "/\\b[A-Z]+(?:_[A-Z0-9]+)+\\b/g"
+        ],
+        "chat.agent.enabled": true,
+        "github.copilot.chat.webSearch.enabled": true,
+        "python.analysis.typeCheckingMode": "off",
+        "ruff.nativeServer": "on",
+        "ruff.organizeImports": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff"
+        },
+        "[shellscript]": {
+          "files.eol": "\n",
+          "editor.defaultFormatter": "mads-hartmann.bash-ide-vscode"
+        }
+      }
+    }
+  }
 
-	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-	// "remoteUser": "root"
+  // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+  // "remoteUser": "root"
 }
