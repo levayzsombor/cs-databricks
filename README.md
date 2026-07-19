@@ -59,10 +59,6 @@ This will make sure that everyone works from the same setup if they chose to do 
 
    ## Git Branching strategy and deployment
 
-### Branches and tags graph
-
-![](assets/20260719_083509_CountryStats-branches.drawio.png)
-
 ### Explanation of branches and tags
 
 Git branching strategies combining Git Rules ( for branches and tags ), GitHub Actions and Permissions help create an orderly merge for code making sure the protected branched have their intended version of the code.
