@@ -1,0 +1,52 @@
+name: Push to prod
+  
+on:
+  push:
+    branches:
+      - prod
+
+env:
+    AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZDO_PAT }}
+    AZDO_ORG_URL: ${{ secrets.AZDO_ORG_URL }}
+    AZDO_PROJECT: ${{ secrets.AZDO_PROJECT }}
+    AZDO_GITHUB_SERVICE_CONNECTION: ${{ secrets.AZDO_GITHUB_SERVICE_CONNECTION }}
+    creds: ${{ secrets.AZURE_CREDENTIALS }}
+    TARGET_ENV: PROD
+
+permissions:
+  contents: read
+
+jobs:
+  ensure-pipeline-and-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Check source branch name
+        run: bash .github/workflows/scripts/common/check-source-branch-name.sh 
+
+      - name: create version tag from source branch name
+        run: bash .github/workflows/scripts/common/create-version-tag.sh
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Install Azure DevOps extension
+        run: bash .github/workflows/scripts/azure/install-azure-devops-extension.sh
+
+      - name: Run Azure DevOps pipeline for blue-green deployment to update Databricks workspace with changes from prod
+        run: bash .github/workflows/scripts/azure/run-azdo-pipeline.sh
+        env:
+          PIPELINE_NAME: cs-databricks-blue-green-deployment.yml
+
+      - name: Run Azure DevOps pipeline to execute smoke tests on new prod deployment
+        run: bash .github/workflows/scripts/azure/run-azdo-pipeline.sh
+        env:
+          PIPELINE_NAME: cs-databricks-run-smoke-tests.yml

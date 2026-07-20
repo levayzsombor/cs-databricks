@@ -1,0 +1,53 @@
+name: Push to staging
+
+on:
+  push:
+    branches:
+      - staging
+
+env:
+    AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZDO_PAT }}
+    AZDO_ORG_URL: ${{ secrets.AZDO_ORG_URL }}
+    AZDO_PROJECT: ${{ secrets.AZDO_PROJECT }}
+    AZDO_GITHUB_SERVICE_CONNECTION: ${{ secrets.AZDO_GITHUB_SERVICE_CONNECTION }}
+    TARGET_ENV: STAGING
+
+permissions:
+  contents: read
+
+jobs:
+  ensure-pipeline-and-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Get target and seed branch names
+        id: get-branch-names
+        run: bash .github/workflows/scripts/common/get-branch-names.sh
+
+      - name: Check source branch name
+        run: bash .github/workflows/scripts/common/check-source-branch-name.sh 
+
+      - name: create alpha version tag from source branch name
+        run: bash .github/workflows/scripts/common/create-alpha-version-tag.sh
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Install Azure DevOps extension
+        run: bash .github/workflows/scripts/azure/install-azure-devops-extension.sh
+
+      - name: Run Azure DevOps pipeline to update Databricks workspace with changes from staging
+        run: bash .github/workflows/scripts/azure/run-azdo-pipeline-update-workspace.sh
+        env:
+          PIPELINE_NAME: cs-databricks-save-test-results.yml 
+
+      - name: Run Azure DevOps pipeline to execute tests on staging
+        run: bash .github/workflows/scripts/azure/run-azdo-pipeline-run-tests.sh

@@ -1,13 +1,10 @@
 repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.4
+  - repo: local
     hooks:
       - id: ruff
         args: [--fix]
       - id: ruff-format
 
-  - repo: local
-    hooks:
       - id: shfmt
         name: shfmt
         entry: shfmt -w -i 2 -ci
