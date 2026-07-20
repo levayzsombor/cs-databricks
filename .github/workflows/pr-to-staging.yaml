@@ -34,12 +34,11 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Check if branch name is valid for staging
-        id: check-branch
-        run: bash .github/workflows/scripts/staging/check-branch-name.sh
+      - name: Check if source branch name is valid for staging
+        run: python .github/workflows/scripts/common/check-branch-name.py
 
-      - name: Developer environment setup (for GitHub Job VM)
-        run: bash .github/workflows/scripts/common/dev-env-setup.sh
+      - name: Local environment setup (for GitHub Job VM)
+        run: bash .github/workflows/scripts/common/local-env-setup.sh
 
       - name: Lint and Format check (on GitHub Job VM)
         run: bash .github/workflows/scripts/common/lint-format-check.sh
@@ -62,7 +61,4 @@ jobs:
         run: bash .github/workflows/scripts/azure/install-azure-devops-extension.sh
 
       - name: Run Azure DevOps pipeline to save test results to artifact storage
-        run: bash .github/workflows/scripts/azure/run-azdo-pipeline.sh
-        env:
-          PIPELINE_NAME: cs-databricks-save-test-results.yml
-          PIPELINE_BRANCH: ${{ github.base_ref }}
+        run: bash .github/workflows/scripts/azure/save-test-results.sh

@@ -1,4 +1,4 @@
-name: PR to prod
+name: PR to dev
 
 on:
   pull_request:
@@ -34,9 +34,13 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Check if branch name is valid for dev
-        id: check-branch
-        run: bash .github/workflows/scripts/dev/check-branch-name.sh
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Check if source branch name is valid for dev
+        run: python .github/workflows/scripts/common/check-branch-name.py
 
       - name: Local environment setup (for GitHub Job VM)
         run: bash .github/workflows/scripts/common/local-env-setup.sh
@@ -63,6 +67,3 @@ jobs:
 
       - name: Run Azure DevOps pipeline to save test results to artifact storage
         run: bash .github/workflows/scripts/azure/save-test-results.sh
-        env:
-          PIPELINE_NAME: cs-databricks-save-test-results.yml
-          PIPELINE_BRANCH: ${{ github.base_ref }}
