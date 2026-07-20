@@ -16,11 +16,15 @@ env:
     TARGET_ENV: DEV_PR
     TEST_RUN_TYPE: PR_TO_STAGING
 
+concurrency:
+  group: "pr-to-staging"
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
 jobs:
-  ensure-pipeline-and-run:
+  pr-to-staging:
     runs-on: ubuntu-latest
 
     steps:

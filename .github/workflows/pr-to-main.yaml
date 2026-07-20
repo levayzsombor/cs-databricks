@@ -9,6 +9,10 @@ on:
       - reopened
       - synchronize
 
+concurrency:
+  group: "pr-to-main"
+  cancel-in-progress: false
+
 env:
     AZDO_ORG_URL: ${{ secrets.AZDO_ORG_URL }}
     AZDO_PROJECT: ${{ secrets.AZDO_PROJECT }}
@@ -20,7 +24,7 @@ permissions:
   contents: read
 
 jobs:
-  ensure-pipeline-and-run:
+  pr-to-main:
     runs-on: ubuntu-latest
 
     steps:

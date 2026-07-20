@@ -12,11 +12,15 @@ env:
     AZDO_GITHUB_SERVICE_CONNECTION: ${{ secrets.AZDO_GITHUB_SERVICE_CONNECTION }}
     TARGET_ENV: STAGING
 
+concurrency:
+  group: "push-to-staging"
+  cancel-in-progress: false
+
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  ensure-pipeline-and-run:
+  push-to-staging:
     runs-on: ubuntu-latest
 
     steps:

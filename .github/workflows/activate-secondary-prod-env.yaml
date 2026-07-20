@@ -1,10 +1,10 @@
-name: Deactivate secondary prod environment
-  
+name: Activate secondary prod environment 
+
 on:
   workflow_dispatch:
 
 concurrency:
-  group: "deactivate-secondary-prod-env"
+  group: "activate-secondary-prod-env"
   cancel-in-progress: false
 
 env:
@@ -12,14 +12,13 @@ env:
     AZDO_ORG_URL: ${{ secrets.AZDO_ORG_URL }}
     AZDO_PROJECT: ${{ secrets.AZDO_PROJECT }}
     AZDO_GITHUB_SERVICE_CONNECTION: ${{ secrets.AZDO_GITHUB_SERVICE_CONNECTION }}
-    creds: ${{ secrets.AZURE_CREDENTIALS }}
-    TARGET_ENV: PROD_SECONDARY
+    TARGET_ENV: PROD
 
 permissions:
   contents: read
 
 jobs:
-  deactivate-secondary-prod-env:
+  activate-secondary-prod-env:
     runs-on: ubuntu-latest
 
     steps:
@@ -32,12 +31,12 @@ jobs:
       - name: Install Azure DevOps extension
         run: bash .github/workflows/scripts/azure/install-azure-devops-extension.sh
 
-      - name: Run Azure DevOps pipeline for blue-green deployment to update Databricks workspace with changes from prod
+      - name: Run Azure DevOps pipeline start the secondary prod environment
         run: bash .github/workflows/scripts/azure/run-azdo-pipeline.sh
         env:
-          PIPELINE_NAME: cs-databricks-blue-green-deployment.yml
+          PIPELINE_NAME: cs-start-secondary-prod-env.yml
 
-      - name: Run Azure DevOps pipeline to execute smoke tests on new prod deployment
+      - name: Run Azure DevOps pipeline run smoke tests on the secondary prod environment
         run: bash .github/workflows/scripts/azure/run-azdo-pipeline.sh
         env:
-          PIPELINE_NAME: cs-databricks-run-smoke-tests.yml
+          PIPELINE_NAME: cs-run-smoke-tests-secondary-prod-env.yml

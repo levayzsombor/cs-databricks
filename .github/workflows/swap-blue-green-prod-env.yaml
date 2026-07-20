@@ -1,41 +1,27 @@
-name: Push to prod
-  
+name: Swap blue-green production environments
+
 on:
-  push:
-    branches:
-      - prod
+  workflow_dispatch:
 
 env:
     AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZDO_PAT }}
     AZDO_ORG_URL: ${{ secrets.AZDO_ORG_URL }}
     AZDO_PROJECT: ${{ secrets.AZDO_PROJECT }}
     AZDO_GITHUB_SERVICE_CONNECTION: ${{ secrets.AZDO_GITHUB_SERVICE_CONNECTION }}
-    creds: ${{ secrets.AZURE_CREDENTIALS }}
-    TARGET_ENV: PROD_SECONDARY
+    TARGET_ENV: PROD_MAIN
 
 concurrency:
-  group: "push-to-prod"
+  group: "swap-blue-green-prod-env"
   cancel-in-progress: false
 
 permissions:
   contents: write
 
 jobs:
-  push-to-prod:
+  ensure-pipeline-and-run:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-
-      - name: Check source branch name
-        run: bash .github/workflows/scripts/common/check-source-branch-name.sh 
-
-      - name: create version tag from source branch name
-        run: bash .github/workflows/scripts/common/create-version-tag.sh
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -45,12 +31,17 @@ jobs:
       - name: Install Azure DevOps extension
         run: bash .github/workflows/scripts/azure/install-azure-devops-extension.sh
 
-      - name: Run Azure DevOps pipeline for blue-green deployment to update Databricks workspace with changes from prod
+      - name: Run Azure DevOps pipeline check that both prod environments are healthy and ready for blue-green swap
         run: bash .github/workflows/scripts/azure/run-azdo-pipeline.sh
         env:
-          PIPELINE_NAME: cs-databricks-blue-green-deployment.yml
+          PIPELINE_NAME: cs-check-if-prod-environments-are-active.yml
 
-      - name: Run Azure DevOps pipeline to execute smoke tests on new prod deployment
+      - name: Run Azure DevOps pipeline swap blue-green production environments 
+        run: bash .github/workflows/scripts/azure/run-azdo-pipeline.sh
+        env:
+          PIPELINE_NAME: cs-swap-blue-green-prod-env.yml
+
+      - name: Run Azure DevOps pipeline to execute smoke tests on main prod deployment
         run: bash .github/workflows/scripts/azure/run-azdo-pipeline.sh
         env:
           PIPELINE_NAME: cs-databricks-run-smoke-tests.yml

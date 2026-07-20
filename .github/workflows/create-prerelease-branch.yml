@@ -1,15 +1,15 @@
-name: "Create prerelease branch from feature tags"
+name: 'Create prerelease branch from feature tags'
 
-"on":
+on:
   workflow_dispatch:
     inputs:
       feature_tags:
-        description: "Comma-separated git tags (e.g. feature-a,feature-b)"
+        description: 'Comma-separated git tags (e.g. feature-a,feature-b)'
         required: true
         type: string
 
 concurrency:
-  group: "release-branch-mutations"
+  group: 'prerelease-branch'
   cancel-in-progress: false
 
 permissions:
@@ -17,7 +17,7 @@ permissions:
   pull-requests: read
 
 jobs:
-  create-release-branch:
+  create-prerelease-branch:
     runs-on: ubuntu-latest
 
     steps:

@@ -1,0 +1,29 @@
+name: "Create version update branch from feature tags"
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: "create-version-update-branch"
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  create-version-update-branch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git identity
+        run: bash .github/workflows/scripts/common/configure-git.sh
+
+      - name: Create pull request for version update branch
+        id: create-pr
+        run: bash .github/workflows/scripts/version-update/create-pr.sh
