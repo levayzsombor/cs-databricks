@@ -1,9 +1,7 @@
+const eslintConfigPrettier = require('eslint-config-prettier');
+
 module.exports = [
-    {
-  extends: [
-    "prettier"
-  ]
-},
+  eslintConfigPrettier,
   {
     ignores: [
       'node_modules/**',
