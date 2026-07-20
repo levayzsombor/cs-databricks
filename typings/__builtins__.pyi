@@ -14,7 +14,6 @@ sql: Callable[[str], DataFrame]
 table: Callable[[str], DataFrame]
 
 def getArgument(name: str, defaultValue: str | None = None) -> object: ...
-
 def displayHTML(html: str) -> None: ...
 def display(
     input: object | None = None,
