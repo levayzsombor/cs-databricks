@@ -31,13 +31,11 @@ jobs:
         run: bash .github/workflows/scripts/azure/install-azure-devops-extension.sh
 
       - name: Run Azure DevOps pipeline to update Databricks workspace with changes from dev
-        run: bash .github/workflows/scripts/azure/run-azdo-pipeline.sh
+        run: bash .github/workflows/scripts/azure/update-workspace.sh
         env:
-          PIPELINE_NAME: cs-databricks-update-workspace.yml
           PIPELINE_BRANCH: dev
 
-      - name: Run Azure DevOps pipeline to execute tests on dev
-        run: bash .github/workflows/scripts/azure/run-azdo-pipeline.sh
+      - name: Execute Azure DevOps pipeline to run tests on ua
+        run: bash .github/workflows/scripts/azure/run-test.sh
         env:
-          PIPELINE_NAME: cs-databricks-run-tests.yml
           PIPELINE_BRANCH: dev

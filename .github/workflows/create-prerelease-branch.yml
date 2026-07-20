@@ -29,9 +29,22 @@ jobs:
       - name: Configure Git identity
         run: bash .github/workflows/scripts/common/configure-git.sh
 
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Get the oldest approved tags hash from the repository
+        run: python .github/workflows/scripts/dev/get-oldest-approved-tag.py
+
+      - name: Check feature tags validity
+        run: python .github/workflows/scripts/dev/check-feature-tags.py
+
+      - name: Create prerelease branch from feature tags
+        run: python .github/workflows/scripts/dev/create-prerelease-branch.py
+
+      - name: Swap the prerelease branch
+        run: bash .github/workflows/scripts/common/swap-to-branch.sh
+
       - name: Create pull request for prerelease branch
-        id: create-pr
-        env:
-          GH_TOKEN: ${{ github.token }}
-          FEATURE_TAGS: ${{ inputs.feature_tags }}
-        run: bash .github/workflows/scripts/prerelease/create-pr.sh
+        run: python .github/workflows/scripts/common/create-pr.py

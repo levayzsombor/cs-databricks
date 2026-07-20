@@ -39,7 +39,7 @@ jobs:
 
       - name: Create a tag from the source branch name
         id: create-tag-from-branch-name
-        run: python .github/workflows/scripts/common/create-tag-from-branch-name.py
+        run: python .github/workflows/scripts/common/create-tag-from-branch-name.py 
 
       - name: Login to Azure
         uses: azure/login@v2

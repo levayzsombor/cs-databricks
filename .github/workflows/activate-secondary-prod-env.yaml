@@ -12,7 +12,7 @@ env:
   AZDO_ORG_URL: ${{ secrets.AZDO_ORG_URL }}
   AZDO_PROJECT: ${{ secrets.AZDO_PROJECT }}
   AZDO_GITHUB_SERVICE_CONNECTION: ${{ secrets.AZDO_GITHUB_SERVICE_CONNECTION }}
-  TARGET_ENV: PROD_GREEN
+  TARGET_ENV: PROD
 
 permissions:
   contents: read
@@ -31,13 +31,4 @@ jobs:
         run: bash .github/workflows/scripts/azure/install-azure-devops-extension.sh
 
       - name: Run Azure DevOps pipeline start the secondary prod environment
-        run: bash .github/workflows/scripts/azure/run-azdo-pipeline.sh
-        env:
-          PIPELINE_NAME: cs-start-secondary-prod-env.yml
-          PIPELINE_BRANCH: prod
-
-      - name: Run Azure DevOps pipeline run smoke tests on the secondary prod environment
-        run: bash .github/workflows/scripts/azure/run-azdo-pipeline.sh
-        env:
-          PIPELINE_NAME: cs-run-smoke-tests-secondary-prod-env.yml
-          PIPELINE_BRANCH: prod
+        run: bash .github/workflows/scripts/azure/activate-secondary-prod-env.sh
