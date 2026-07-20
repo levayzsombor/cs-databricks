@@ -34,6 +34,9 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Local environment setup (for GitHub Job VM)
+        run: bash .github/workflows/scripts/common/local-env-setup.sh
+
       - name: Get the oldest approved tags hash from the repository
         run: python .github/workflows/scripts/dev/get-oldest-approved-tag.py
 

@@ -13,7 +13,7 @@ env:
   AZDO_ORG_URL: ${{ secrets.AZDO_ORG_URL }}
   AZDO_PROJECT: ${{ secrets.AZDO_PROJECT }}
   AZDO_GITHUB_SERVICE_CONNECTION: ${{ secrets.AZDO_GITHUB_SERVICE_CONNECTION }}
-  TARGET_ENV: DEV_PR
+  TARGET_ENV: dev
   TEST_RUN_TYPE: PR_TO_DEV
 
 concurrency:
@@ -39,11 +39,14 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Check if source branch name is valid for dev
-        run: python .github/workflows/scripts/common/check-branch-name.py
-
       - name: Local environment setup (for GitHub Job VM)
         run: bash .github/workflows/scripts/common/local-env-setup.sh
+
+      - name: Get source and target branch names
+        run: bash .github/workflows/scripts/common/get-branch-names.sh
+
+      - name: Check if source branch name is valid for dev
+        run: python .github/workflows/scripts/common/check-branch-name.py
 
       - name: Lint and Format check (on GitHub Job VM)
         run: bash .github/workflows/scripts/common/lint-format-check.sh

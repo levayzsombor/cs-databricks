@@ -34,6 +34,14 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Local environment setup (for GitHub Job VM)
+        run: bash .github/workflows/scripts/common/local-env-setup.sh
+
       - name: Check if source branch name is valid for dev
         run: python .github/workflows/scripts/common/check-branch-name.py
 
