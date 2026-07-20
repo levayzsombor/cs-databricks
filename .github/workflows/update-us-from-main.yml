@@ -1,4 +1,4 @@
-name: Update UA from main HEAD
+name: Update UA from dev HEAD
 
 on:
   workflow_dispatch:
@@ -11,14 +11,14 @@ env:
   TARGET_ENV: UA
 
 concurrency:
-  group: 'update-ua-from-main'
+  group: 'update-ua-from-dev'
   cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
-  update-ua-from-main:
+  update-ua-from-dev:
     runs-on: ubuntu-latest
 
     steps:
@@ -30,14 +30,14 @@ jobs:
       - name: Install Azure DevOps extension
         run: bash .github/workflows/scripts/azure/install-azure-devops-extension.sh
 
-      - name: Run Azure DevOps pipeline to update Databricks workspace with changes from main
+      - name: Run Azure DevOps pipeline to update Databricks workspace with changes from dev
         run: bash .github/workflows/scripts/azure/run-azdo-pipeline.sh
         env:
           PIPELINE_NAME: cs-databricks-update-workspace.yml
-          PIPELINE_BRANCH: main
+          PIPELINE_BRANCH: dev
 
-      - name: Run Azure DevOps pipeline to execute tests on main
+      - name: Run Azure DevOps pipeline to execute tests on dev
         run: bash .github/workflows/scripts/azure/run-azdo-pipeline.sh
         env:
           PIPELINE_NAME: cs-databricks-run-tests.yml
-          PIPELINE_BRANCH: main
+          PIPELINE_BRANCH: dev

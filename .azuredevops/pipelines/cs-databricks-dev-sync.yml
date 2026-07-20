@@ -11,7 +11,7 @@ variables:
   - name: DATABRICKS_CLUSTER_NAME
     value: CS-databricks-dev
   - name: DATABRICKS_REPO_BRANCH
-    value: main
+    value: dev
   - name: DATABRICKS_REPO_PROVIDER
     value: gitHub
   - name: DATABRICKS_WORKSPACE_REPO_PATH
@@ -52,7 +52,7 @@ steps:
       DATABRICKS_CLUSTER_POLICY_ID: $(DATABRICKS_CLUSTER_POLICY_ID)
 
   - script: python3 .azuredevops/scripts/sync-databricks-repo.py
-    displayName: Sync main branch in Databricks Repo
+    displayName: Sync dev branch in Databricks Repo
     env:
       DATABRICKS_HOST: $(DATABRICKS_HOST)
       DATABRICKS_TOKEN: $(DATABRICKS_TOKEN)

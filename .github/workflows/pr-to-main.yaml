@@ -36,7 +36,7 @@ jobs:
 
       - name: Check if branch name is valid for dev
         id: check-branch
-        run: bash .github/workflows/scripts/main/check-branch-name.sh
+        run: bash .github/workflows/scripts/dev/check-branch-name.sh
 
       - name: Developer environment setup (for GitHub Job VM)
         run: bash .github/workflows/scripts/common/dev-env-setup.sh

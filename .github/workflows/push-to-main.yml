@@ -1,14 +1,14 @@
-name: 'Push to main'
+name: 'Push to dev'
 
 on:
   pull_request:
     branches:
-      - main
+      - dev
     types:
       - closed
 
 concurrency:
-  group: 'push-to-main'
+  group: 'push-to-dev'
   cancel-in-progress: false
 
 env:
@@ -22,7 +22,7 @@ permissions:
   contents: write
 
 jobs:
-  push-to-main:
+  push-to-dev:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
@@ -53,14 +53,14 @@ jobs:
       - name: Install Azure DevOps extension
         run: bash .github/workflows/scripts/azure/install-azure-devops-extension.sh
 
-      - name: Run Azure DevOps pipeline to update Databricks workspace with changes from main
+      - name: Run Azure DevOps pipeline to update Databricks workspace with changes from dev
         run: bash .github/workflows/scripts/azure/run-azdo-pipeline.sh
         env:
           PIPELINE_NAME: cs-databricks-update-workspace.yml
-          PIPELINE_BRANCH: main
+          PIPELINE_BRANCH: dev
 
-      - name: Run Azure DevOps pipeline to execute tests on main
+      - name: Run Azure DevOps pipeline to execute tests on dev
         run: bash .github/workflows/scripts/azure/run-azdo-pipeline.sh
         env:
           PIPELINE_NAME: cs-databricks-run-tests.yml
-          PIPELINE_BRANCH: main
+          PIPELINE_BRANCH: dev
