@@ -51,12 +51,6 @@ jobs:
       - name: Run tests on developer environment (on GitHub Job VM)
         run: bash .github/workflows/scripts/common/run-tests.sh
 
-      - name: Report test results
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: test-results/
-
       - name: Login to Azure
         uses: azure/login@v2
         with:

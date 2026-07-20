@@ -3,7 +3,7 @@ name: PR to dev
 on:
   pull_request:
     branches:
-      - prod
+      - dev
     types:
       - opened
       - reopened
