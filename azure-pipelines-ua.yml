@@ -1,9 +1,6 @@
 name: ua-$(Date:yyyyMMdd)$(Rev:.r)
 
-trigger:
-  branches:
-    include:
-      - main
+trigger: none
 
 pr: none
 

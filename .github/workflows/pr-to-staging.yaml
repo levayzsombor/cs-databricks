@@ -10,14 +10,14 @@ on:
       - synchronize
 
 env:
-    AZDO_ORG_URL: ${{ secrets.AZDO_ORG_URL }}
-    AZDO_PROJECT: ${{ secrets.AZDO_PROJECT }}
-    AZDO_GITHUB_SERVICE_CONNECTION: ${{ secrets.AZDO_GITHUB_SERVICE_CONNECTION }}
-    TARGET_ENV: DEV_PR
-    TEST_RUN_TYPE: PR_TO_STAGING
+  AZDO_ORG_URL: ${{ secrets.AZDO_ORG_URL }}
+  AZDO_PROJECT: ${{ secrets.AZDO_PROJECT }}
+  AZDO_GITHUB_SERVICE_CONNECTION: ${{ secrets.AZDO_GITHUB_SERVICE_CONNECTION }}
+  TARGET_ENV: STAGING_PR
+  TEST_RUN_TYPE: PR_TO_STAGING
 
 concurrency:
-  group: "pr-to-staging"
+  group: 'pr-to-staging'
   cancel-in-progress: false
 
 permissions:
@@ -42,13 +42,13 @@ jobs:
         run: bash .github/workflows/scripts/common/dev-env-setup.sh
 
       - name: Lint and Format check (on GitHub Job VM)
-        run: bash .github/workflows/scripts/common/lint-format-check.sh 
+        run: bash .github/workflows/scripts/common/lint-format-check.sh
 
       - name: Run tests on developer environment (on GitHub Job VM)
         run: bash .github/workflows/scripts/common/run-tests.sh
-        
+
       - name: Report test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-results
           path: test-results/
@@ -62,7 +62,7 @@ jobs:
         run: bash .github/workflows/scripts/azure/install-azure-devops-extension.sh
 
       - name: Run Azure DevOps pipeline to save test results to artifact storage
-        run: bash .github/workflows/scripts/azure/run-azdo-pipeline-save-test-results.sh
+        run: bash .github/workflows/scripts/azure/run-azdo-pipeline.sh
         env:
           PIPELINE_NAME: cs-databricks-save-test-results.yml
-      
+          PIPELINE_BRANCH: ${{ github.base_ref }}

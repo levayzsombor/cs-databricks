@@ -9,17 +9,16 @@ on:
       - reopened
       - synchronize
 
-concurrency:
-  group: "pr-to-prod"
-  cancel-in-progress: false
-
 env:
-    AZDO_ORG_URL: ${{ secrets.AZDO_ORG_URL }}
-    AZDO_PROJECT: ${{ secrets.AZDO_PROJECT }}
-    AZDO_GITHUB_SERVICE_CONNECTION: ${{ secrets.AZDO_GITHUB_SERVICE_CONNECTION }}
-    TARGET_ENV: STAGING_PR
-    TEST_RUN_TYPE: PR_TO_PROD
+  AZDO_ORG_URL: ${{ secrets.AZDO_ORG_URL }}
+  AZDO_PROJECT: ${{ secrets.AZDO_PROJECT }}
+  AZDO_GITHUB_SERVICE_CONNECTION: ${{ secrets.AZDO_GITHUB_SERVICE_CONNECTION }}
+  TARGET_ENV: PROD_PR
+  TEST_RUN_TYPE: PR_TO_PROD
 
+concurrency:
+  group: 'pr-to-prod'
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -43,13 +42,13 @@ jobs:
         run: bash .github/workflows/scripts/common/dev-env-setup.sh
 
       - name: Lint and Format check (on GitHub Job VM)
-        run: bash .github/workflows/scripts/common/lint-format-check.sh 
+        run: bash .github/workflows/scripts/common/lint-format-check.sh
 
       - name: Run tests on developer environment (on GitHub Job VM)
         run: bash .github/workflows/scripts/common/run-tests.sh
-        
+
       - name: Report test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-results
           path: test-results/
@@ -66,4 +65,4 @@ jobs:
         run: bash .github/workflows/scripts/azure/run-azdo-pipeline.sh
         env:
           PIPELINE_NAME: cs-databricks-save-test-results.yml
-      
+          PIPELINE_BRANCH: ${{ github.base_ref }}

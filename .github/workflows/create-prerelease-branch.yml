@@ -14,7 +14,7 @@ concurrency:
 
 permissions:
   contents: write
-  pull-requests: read
+  pull-requests: write
 
 jobs:
   create-prerelease-branch:
@@ -29,38 +29,9 @@ jobs:
       - name: Configure Git identity
         run: bash .github/workflows/scripts/common/configure-git.sh
 
-      - name: Create base for prerelease branch
-        id: create-base
-        run: bash .github/workflows/scripts/prerelease/find-base-for-prerelease-branch.sh
-
-      - name: Get tags and hashes from base to head
-        id: get-tags-and-hashes
-        run: bash .github/workflows/scripts/common/get-tags-and-hashes.sh
-
-      - name: Validate that approved feature tags exist
-        id: validate-tags
-        run: bash .github/workflows/scripts/common/validate-tags.sh
-
-      - name: Collect implemented feature tags, version-update tags and hotfix tags
-        id: collect-must-have-tags
-        run: bash .github/workflows/scripts/prerelease/collect-must-have-tags.sh
-
-      - name: Get tags approved by user acceptance
-        id: get-approved-tags
-        run: bash .github/workflows/scripts/prerelease/get-tags.sh
-
-      - name: Order tags by date
-        id: order-tags
-        run: bash .github/workflows/scripts/prerelease/order-tags.sh
-
-      - name: Check if every commit starting from base has a tag
-        id: check-tags
-        run: bash .github/workflows/scripts/prerelease/check-tags.sh
-
-      - name: Cherry-pick commits from tags to prerelease branch
-        id: cherry-pick
-        run: bash .github/workflows/scripts/prerelease/cherry-pick-tags.sh
-
       - name: Create pull request for prerelease branch
         id: create-pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FEATURE_TAGS: ${{ inputs.feature_tags }}
         run: bash .github/workflows/scripts/prerelease/create-pr.sh

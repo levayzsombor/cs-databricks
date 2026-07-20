@@ -1,26 +1,29 @@
-name: Push to main
-env:
-    AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZDO_PAT }}
-    AZDO_ORG_URL: ${{ secrets.AZDO_ORG_URL }}
-    AZDO_PROJECT: ${{ secrets.AZDO_PROJECT }}
-    AZDO_GITHUB_SERVICE_CONNECTION: ${{ secrets.AZDO_GITHUB_SERVICE_CONNECTION }}
-    creds: ${{ secrets.AZURE_CREDENTIALS }}
-    TARGET_ENV: DEV
+name: 'Push to main'
 
 on:
-  push:
+  pull_request:
     branches:
       - main
+    types:
+      - closed
 
 concurrency:
-  group: "push-to-main"
+  group: 'push-to-main'
   cancel-in-progress: false
+
+env:
+  AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZDO_PAT }}
+  AZDO_ORG_URL: ${{ secrets.AZDO_ORG_URL }}
+  AZDO_PROJECT: ${{ secrets.AZDO_PROJECT }}
+  AZDO_GITHUB_SERVICE_CONNECTION: ${{ secrets.AZDO_GITHUB_SERVICE_CONNECTION }}
+  TARGET_ENV: DEV
 
 permissions:
   contents: write
 
 jobs:
   push-to-main:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
     steps:
@@ -34,11 +37,11 @@ jobs:
         id: get-branch-names
         run: bash .github/workflows/scripts/common/get-branch-names-and-hashes.sh
 
-      - name: Check if seed branch name is valid
-        id: check-seed-branch
-        run: bash .github/workflows/scripts/common/check-seed-branch.sh
+      - name: Check if source branch name is valid
+        id: check-source-branch
+        run: bash .github/workflows/scripts/common/check-source-branch-name.sh
 
-      - name: Create a tag from the branch name
+      - name: Create a tag from the source branch name
         id: create-tag-from-branch-name
         run: bash .github/workflows/scripts/common/create-tag-from-branch-name.sh
 
@@ -54,9 +57,10 @@ jobs:
         run: bash .github/workflows/scripts/azure/run-azdo-pipeline.sh
         env:
           PIPELINE_NAME: cs-databricks-update-workspace.yml
+          PIPELINE_BRANCH: main
 
       - name: Run Azure DevOps pipeline to execute tests on main
         run: bash .github/workflows/scripts/azure/run-azdo-pipeline.sh
         env:
           PIPELINE_NAME: cs-databricks-run-tests.yml
-      
+          PIPELINE_BRANCH: main
