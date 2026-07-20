@@ -30,9 +30,9 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Get target and seed branch names
+      - name: Get target and seed branch names and hashes
         id: get-branch-names
-        run: bash .github/workflows/scripts/common/get-branch-names.sh
+        run: bash .github/workflows/scripts/common/get-branch-names-and-hashes.sh
 
       - name: Check if seed branch name is valid
         id: check-seed-branch

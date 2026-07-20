@@ -34,8 +34,8 @@ jobs:
       - name: Check source branch name
         run: bash .github/workflows/scripts/common/check-source-branch-name.sh 
 
-      - name: create version tag from source branch name
-        run: bash .github/workflows/scripts/common/create-version-tag.sh
+      - name: Create version tag from source branch name
+        run: bash .github/workflows/scripts/common/create-tag-from-branch-name.sh
 
       - name: Login to Azure
         uses: azure/login@v2
