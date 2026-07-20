@@ -38,13 +38,13 @@ jobs:
         id: check-branch
         run: bash .github/workflows/scripts/dev/check-branch-name.sh
 
-      - name: Developer environment setup (for GitHub Job VM)
-        run: bash .github/workflows/scripts/common/dev-env-setup.sh
+      - name: Local environment setup (for GitHub Job VM)
+        run: bash .github/workflows/scripts/common/local-env-setup.sh
 
       - name: Lint and Format check (on GitHub Job VM)
         run: bash .github/workflows/scripts/common/lint-format-check.sh
 
-      - name: Run tests on developer environment (on GitHub Job VM)
+      - name: Run tests on local environment (on GitHub Job VM)
         run: bash .github/workflows/scripts/common/run-tests.sh
 
       - name: Report test results
