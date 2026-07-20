@@ -59,28 +59,36 @@ This will make sure that everyone works from the same setup if they chose to do 
 
 ## Git Branching strategy and deployment
 
-### Branches and tags graph
+### Version lifecycle:
 
-![](assets/20260719_083509_CountryStats-branches.drawio.png)
+![](assets/20260719_224736_CountryStats-lifecycle.drawio.png)
 
-### Explanation of branches and tags
+###
+
+Explanation of branches and tags
 
 Git branching strategies combining Git Rules ( for branches and tags ), GitHub Actions and Permissions help create an orderly merge for code making sure the protected branched have their intended version of the code.
 With the same GitHub Actions the Deployment and updates of the Azure applications can be started to make it automatic.
 
-The basic idea is to have 5 protected branches: main (default), ua, staging, prod as permanent branches and pre-release ephemeral branch. merges into these branches are with strict rules and uses tags on commits to track features and versions.
+The basic idea is to have 3 protected branches: dev (default), staging, prod as permanent branches. Merges into these branches are with strict rules and uses tags on commits to track features and versions. Witch proper commits we can follow what features are deployed on what environments. and since TAGs only just label a commit, it doesn't clutter the branch structure with never ending small branches and keeps it tidy with the code being on 3 permanent branch.
 
-**hot fix** branches can be created that can merge into the **ua**, **pre-release** and **staging** branch with a PR (and senior approval). At the commit hash a _**hot fix**_ tag is created. WARNING! There is no check of what code for example other features are included this code, anything from here can go into the approved protected branches. A senior Approval should be needed at the PR for this
+**hotfix** branches can be created that can merge into the **dev** and **staging** branch with a PR (and senior approval). At the commit hash a _**hotfix**_ tag is created from the name of the branch if it's to **dev**. Because of the tag generation branch name must abide by strict naming rules: starts with: hotfix-<letters, numbers, ->_<whatever>. The tag will use hotfix-<feature-name>. If it's merged into staging it creates a minor version increase tag at the commit hash _**version-(X.X.X+1)-staging**_. After merge the branch is deleted only the tag remains.
 
-Development happens in **feature branches** that create _**tag**_ at the commit hash when merging to see what feature its part of ex: tag: _**feature-import-update**_. This code merge into **main** where it's together with the other improvements and tested. GitHub Action automatically updates the **DEV** Azure application with the code. It can only merge into **main** and **pre-release**. Before merging it into **main** there is a forced rebase of the branch. The reason for this is while in a normal setup merging the current **main** branch HEAD into the **feature** branch is the same as rebasing since the PR checks the difference between the two codes, in this case its critical to only have the feature code at the point of the tag creation and nothing else. If the code is merged into it instead of rebased other features codes will be included in the tag tainting it. 
+Development happens in **feature branches** that create _**tag**_ at the commit hash in the **dev** branch when merging to see what feature its part of ex: tag: _**feature-import-update**_. This tag is generated from the branch name. GitHub Action automatically updates the **DEV** Azure application with the code. It can only merge into **dev**. Because of the tag generation branch name must abide by strict naming rules: starts with: feature-<letters, numbers, ->_<whatever>.
+The tag will use feature-<feature-name>. After merge the branch is deleted only the tag remains.
 
-When **main** is ready it merges with a PR into **ua** (user acceptance) with a PR that provides a list of all the _**feature**_ tags that is included in it. GitHub Action updates the **UA** Azure application automatically with the new code.
+When **dev** is ready A GitHub action can deploy it to the **UA** (user acceptance) environment where it can be reviewed.
 
-After user acceptance is done the approved _**features**_ and _**hot fixes**_ all merge into a **pre-release** branch its base being the last _**version**_ tag (where **prod** merged back into **main**) via a GitHub action. A pre-release PR is created that has an incrementing _**version-alpha**_ tag ex: _**version-1.0.5-alpha**_ that is merged into the **staging** branch. This is automated by a GitHub Action.
+When user acceptance is done and the accepted _**features**_ are selected another GitHub action creates a
+**pre-release** branch. The baseline is last commit that is before the oldest not accepted _**feature**_ tag. From there every already accepted and now accepted _**feature**_ tag and every _**hotfix**_ and every _**version**_ tag is cherry-picked into the **pre-release** branch. A PR is opened that lists all new features and has a label of either: _MAJOR_ , _MINOR_ or _PATCH_ and merges into **staging** branch. After merge the branch is deleted only the tag remains.
 
-This **staging** branch have a chance to be broken since not all the code from **main** was merged into it, if there were _**features**_ excluded. This can be repaired and run in the staging environment until the tests pass with the new PR. Since its separated from **main** development can continue on **main** while the validation is ongoing. All repos go with the same _**version**_ so staging check can only pass if all the repositories are on the same _**version**_. If a repository doesn't need new code for the version the _**version**_ tag is added next to the old one.
+When the **pre-release** is merged into **staging** all newly accepted feature tags in it will be replaced by _**merged-feature-(feature name)**_ marking them an accepted feature. A new _**alpha-version-(X.X.X)**_ tag is created at the merge commit hash of the **staging** based on the label the PR had. (MAJOR).(MINOR).(PATCH) one of them increments by one.
 
-After this a release PR is created from **staging** with the _**version**_ tag (alpha removed) that lists all _**feature**_ tags and **hot fixes** that was included, and merge into the **prod** protected branch. GitHub action automatically updates the inactive **PROD** Azure application. In Blue - Green deployment there is an active **PROD** application and an inactive one. Since its cloud the inactive doesn't cost resources. When the inactive **PROD** application activates Users can test it to their needs. if accepted it takes on the main **PROD** application role and the old version goes inactive (can be started up if there is an issue with the new one). After this a PR is created from the _**version**_ tag and merged with a PR into main updating the version number and realigning it with the hot fixes made before.
+This **staging** branch have a chance to be broken since not all the code from **dev** was merged into it, if there were _**features**_ excluded. This can be repaired and run in the staging environment until the tests pass with the new PR. Since its separated from **dev** development can continue on **dev** while the validation is ongoing. Staging issues can only be repaired by **hotfix** branch PR that will increase the _PATCH_ number of the _**alpha-version**_ by 1. All repos go with the same (_MAJOR_._MINOR_._X_) _**alpha-version**_ tag so staging check can only pass if all the repositories are on the same _**alpha-version**_. If a repository doesn't need new code the _**alpha-version**_ tag is added next to the old one. After testing is done a release PR is create from **staging** HEAD to **prod** that lists all _**feature**_ tags and **hot fixes** that was included. At the merge commit hash a _**version**_ tag is created on prod that is the same as the last tag with the alpha- prefix removed. ex: _**version-1.2.5**_.
+
+**Prod** branch can only accept PRs from **staging** branch and it has to have no conflict in it. If there is a conflict with **staging** then a **hotfix** PR needs to correct it inside **staging** branch. Hot-fixes cannot apply to **prod** branch directly. GitHub action automatically updates the inactive **PROD** Azure application. In Blue - Green deployment there is an active **PROD** application and an inactive one. Since its cloud the inactive doesn't cost resources. When the inactive **PROD** application activates Users can test it to their needs. if accepted it takes on the main **PROD** application role and the old version goes inactive (can be started up if there is an issue with the new one).
+
+After the Blue-Green switch a GitHub action can be started that makes a **dev-version-(X.X.X)\_update** branch toward **dev** from the _**version**_ tag and a PR is created. When it merges into **dev** a _**dev-version-(X.X.X)**_ tag is created on **dev**.
 
 ### Git Branches:
 
@@ -90,51 +98,52 @@ a Squash merge is recommended for all branches by default
 1. Feature branch (not protected):
 
    - Newly created branch for each feature
-   - Any branch can be merged into it
-   - Can only merge to the **main** protected branch with a PR
-   - Needs a _**feature-(name)**_ tag to merge
-   - Mandatory rebase to current **main** branch HEAD before merging it into it
+   - Can only merge to the **dev** protected branch with a PR
+   - Needs a _**feature-(name)**_ as branch name to be accepted.
+   - Destroyed after it's merged into **dev**
 
 2. Hotfix branch (not protected):
 
    - Newly created branch for each hotfix
-   - Any branch can merge into it
-   - Can only merge into **main**, **ua**, **pre-release** and **staging** protected branch with a PR
-   - Needs a _**hotfix-(name)**_ tag to merge
+   - Can only merge into **dev** and **staging** protected branch with a PR
+   - Needs a _**hotfix-(name)**_ as branch name to be accepted
+   - Destroyed after it's merged
 
-3. Main branch (default, protected):
+3. Dev branch (default, protected):
 
    - Permanent branch for development
-   - Only **feature**, **hotfix** and **prod** branches can merge into it
-   - Checks if **feature** branch is rebased to **main** branch current HEAD before merge
-   - Can only merge into **ua** protected branch with a PR
+   - Only **feature**, **hotfix** and **version-sync** branches can merge into it
+   - Creates _**feature-(name)**_, _**hotfix-(name)**_, _**dev-version**_ tag based on what is merged into it
+   - Checks if **feature** branch is rebased to **dev** branch current HEAD before merge
+   - Deployed on DEV env and on UA
 
-4. Ua branch (user acceptance, protected)
+4. Pre-release branch (not protected):
 
-   - Permanent branch for UA
-   - Only **main** and **hotfix** branches can merge into it
-   - Can't merge into anything
-
-5. Pre-release branch (not protected):
-
-   - Newly created branch for each pre-release
-   - Only **feature** and **hotfix** branches can merge into it
-   - Has a pre-push check that blocks all code changes if its not coming from a **feature** or **hotfix** branch
+   - Generated branch for each pre-release
+   - The baseline is last commit that is before the oldest not accepted _**feature**_ tag. From there every already accepted and now accepted _**feature**_ tag and every _**hotfix**_ and every _**version**_ tag is cherry-picked into this.
+   - PR automatically created.
    - Can only merge into **staging** protected branch with a PR
-   - Needs a _**version-(number)-alpha**_ tag to merge
+   - Destroyed after it's merged
 
-6. Staging branch (protected):
+5. Staging branch (protected):
 
    - Permanent branch for staging
+   - a _**alpha-version-(number)**_ tag is created when something is merged into it
    - Only **pre-release** and **hot-fix** branches can merge into it
    - Can only merge into **prod** protected branch with a PR
-   - Needs a _**version-(number)**_ tag to merge
 
-7. Prod branch (protected):
+6. Prod branch (protected):
 
    - Permanent branch for production
+   - A _**version-(number)**_ tag is created when something is merged into it
    - Only **staging** branch can merge into it
-   - Can only merge into **main** protected branch with a PR
+
+7. Dev-version-update branch (not protected):
+
+   - Generated branch for each feature
+   - Can only merge to the **dev** protected branch with a PR
+   - PR automatically created
+   - Destroyed after it's merged into **dev**
 
 ### Environments:
 
@@ -142,15 +151,15 @@ There are 5 environments that maintain a Databricks Azure Application. Since the
 
 1. Dev
 
-   - The **main**, **feature**, and **hot-fix** branches can be here to check them
+   - The **dev**, **feature**, and **hot-fix**, **pre-release**, **dev-version-update** branches can be here to check them
 
 2. UA
 
-   - **ua** branch is here
+   - **dev** branch is here to be evaluated
 
 3. Staging
 
-   - **staging** branch is here 
+   - **staging** branch is here
 
 4. Prod (Blue)
 

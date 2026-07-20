@@ -1,0 +1,68 @@
+name: PR to prod
+
+on:
+  pull_request:
+    branches:
+      - prod
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+env:
+  AZDO_ORG_URL: ${{ secrets.AZDO_ORG_URL }}
+  AZDO_PROJECT: ${{ secrets.AZDO_PROJECT }}
+  AZDO_GITHUB_SERVICE_CONNECTION: ${{ secrets.AZDO_GITHUB_SERVICE_CONNECTION }}
+  TARGET_ENV: PROD_PR
+  TEST_RUN_TYPE: PR_TO_PROD
+
+concurrency:
+  group: 'pr-to-prod'
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  pr-to-prod:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Check if branch name is valid for prod
+        id: check-branch
+        run: bash .github/workflows/scripts/prod/check-branch-name.sh
+
+      - name: Developer environment setup (for GitHub Job VM)
+        run: bash .github/workflows/scripts/common/dev-env-setup.sh
+
+      - name: Lint and Format check (on GitHub Job VM)
+        run: bash .github/workflows/scripts/common/lint-format-check.sh
+
+      - name: Run tests on developer environment (on GitHub Job VM)
+        run: bash .github/workflows/scripts/common/run-tests.sh
+
+      - name: Report test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results/
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Install Azure DevOps extension
+        run: bash .github/workflows/scripts/azure/install-azure-devops-extension.sh
+
+      - name: Run Azure DevOps pipeline to save test results to artifact storage
+        run: bash .github/workflows/scripts/azure/run-azdo-pipeline.sh
+        env:
+          PIPELINE_NAME: cs-databricks-save-test-results.yml
+          PIPELINE_BRANCH: ${{ github.base_ref }}
