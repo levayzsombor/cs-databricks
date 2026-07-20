@@ -1,0 +1,9 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0
+rootdir: /workspaces/cs-databricks
+configfile: pyproject.toml
+collected 5 items
+
+tests/test_example.py .....                                              [100%]
+
+============================== 5 passed in 0.11s ===============================
