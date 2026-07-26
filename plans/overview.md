@@ -1,7 +1,7 @@
 # Repository Overview & Implementation Plan
 
 **Last Updated**: 2026-07-26  
-**Milestone Status**: 2 - Agent Readiness Review (Complete) → Moving to Milestone 3
+**Milestone Status**: 3 - Agent-Specific Plans & Implementation (In Progress)
 
 ---
 
@@ -609,5 +609,203 @@ For each agent:
 
 ---
 
-**Document Status**: Milestone 2 Complete  
-**Ready for**: Milestone 3 Agent Handoff
+## Milestone 3 Kickoff: Agent-Specific Plans & Implementation ✅
+
+**Status**: In Progress  
+**Date Started**: 2026-07-26  
+**Expected Completion**: 2026-08-10
+
+### What's Happening Now
+
+Each agent has received their individual implementation plan with:
+
+- Detailed responsibilities for their domain
+- Phase-based task breakdown (which phases they work in)
+- Step-by-step instructions for each task
+- Success criteria and deliverables
+- Cross-agent dependencies identified
+- Risks and mitigations
+
+### Agent Plans Created
+
+| Agent                      | Plan File                                                          | Phase(s) | Status         |
+| -------------------------- | ------------------------------------------------------------------ | -------- | -------------- |
+| **CI/CD Specialist**       | [plans/ci-cd-specialist.md](plans/ci-cd-specialist.md)             | 1 & 4    | Ready to start |
+| **Databricks Agent**       | [plans/databricks-agent.md](plans/databricks-agent.md)             | 1 & 2    | Ready to start |
+| **Python Notebook Agent**  | [plans/python-notebook-agent.md](plans/python-notebook-agent.md)   | 2        | Ready to start |
+| **QA Agent**               | [plans/qa-agent.md](plans/qa-agent.md)                             | 1 & 3    | Ready to start |
+| **React Frontend Agent**   | [plans/react-frontend-agent.md](plans/react-frontend-agent.md)     | 3        | Ready to start |
+| **Azure Logic Apps Agent** | [plans/azure-logic-apps-agent.md](plans/azure-logic-apps-agent.md) | 4        | Ready to start |
+| **Power BI Agent**         | [plans/power-bi-agent.md](plans/power-bi-agent.md)                 | 3        | Ready to start |
+
+### Milestone 3 Workflow
+
+**For each agent:**
+
+1. **Review Your Plan**
+   - Read `plans/[agent-name].md` (created just for you!)
+   - Understand your assigned tasks and phases
+   - Review dependencies with other agents
+
+2. **Ask for Clarification**
+   - If anything is unclear, ask Repository Planner
+   - If you need additional tools/skills, request them
+   - If you see a blocker, report it immediately
+
+3. **Start Implementation**
+   - Follow your plan's tasks in order
+   - Update your plan file as you make progress
+   - Mark sections complete with ✅
+   - Report blockers or dependencies
+
+4. **Coordinate with Other Agents**
+   - Check your plan's "Cross-Agent Dependencies" section
+   - If you block another agent, prioritize that work
+   - If another agent blocks you, escalate to Repository Planner
+
+---
+
+### Implementation Phases (Parallel Workflow)
+
+**Phase 1 (Week 1-2): Foundation** [STARTING NOW]
+
+- **Parallel**: CI/CD Specialist, Databricks Agent, QA Agent
+- **CI/CD**: GitHub Actions, Helm charts, Azure Log Analytics
+- **Databricks**: Logging, Pydantic models, API clients, database layer
+- **QA**: Test infrastructure, unit tests, schema validation tests
+
+**Phase 2 (Week 2-3): Core Logic** [STARTS WHEN PHASE 1 COMPLETE]
+
+- **Parallel**: Databricks Agent, Python Notebook Agent
+- **Databricks**: Collectors, transformers, delivery modules
+- **Python Notebook**: Orchestration notebooks, data quality dashboard
+
+**Phase 3 (Week 3-4): Quality & Visibility** [PARALLEL WITH PHASE 2]
+
+- **Parallel**: QA Agent, React Frontend Agent, Power BI Agent
+- **QA**: Data transformation tests, data quality tests, integration tests
+- **React**: Monitoring web page (versions, features, logs, actions)
+- **Power BI**: Data model, dashboards, reporting
+
+**Phase 4 (Week 3-4): Orchestration** [SEQUENTIAL - DEPENDS ON OTHERS]
+
+- **Sequential**: Azure Logic Apps Agent, CI/CD Specialist
+- **Azure Logic Apps**: Pre-release workflow, Blue-Green approval, environment updates
+- **CI/CD**: Integration testing, end-to-end validation
+
+---
+
+### Next Steps for Each Agent
+
+**All Agents:**
+
+- [ ] Read your plan file
+- [ ] Report any blockers or questions
+- [ ] Begin Phase 1 tasks (or Phase 2 if parallel)
+- [ ] Update your plan with progress
+
+**CI/CD Specialist Agent:**
+
+- Start with GitHub Actions workflows (Task 1.1)
+- Parallelize with Databricks and QA
+
+**Databricks Agent:**
+
+- Start with logging framework (Task 1.1)
+- Parallelize with CI/CD and QA
+
+**Python Notebook Agent:**
+
+- Wait for Databricks Agent to complete Phase 1 modules
+- Can start notebook preparation in Phase 1
+
+**QA Agent:**
+
+- Start test infrastructure (Task 1.1)
+- Parallelize with Databricks for unit tests
+
+**React Frontend Agent:**
+
+- Wait for CI/CD Agent (GitHub API/Azure Log Analytics)
+- Can start project setup in parallel
+
+**Azure Logic Apps Agent:**
+
+- Wait for CI/CD and React Agent work to complete
+- Can design workflows in parallel with development
+
+**Power BI Agent:**
+
+- Wait for Databricks Agent (data tables)
+- Can design data model in parallel
+
+---
+
+### Communication Protocol
+
+- **Daily Progress**: Update `plans/[agent-name].md` with completed tasks (✅)
+- **Blockers**: Report immediately to Repository Planner in Copilot chat
+- **Cross-Agent Issues**: Tag relevant agents in updates
+- **Questions**: Ask in Copilot chat, tag Repository Planner
+- **Handoff Notes**: When complete, include summary of deliverables in plan file
+
+---
+
+### Success Criteria for Milestone 3
+
+All agents report "Handoff Checklist Complete" with ✅ on all items:
+
+✅ **CI/CD Specialist**: Workflows, Helm charts, logging, Blue-Green setup  
+✅ **Databricks Agent**: Modules for collection, transformation, delivery  
+✅ **Python Notebook Agent**: Orchestration notebooks working end-to-end  
+✅ **QA Agent**: Test suite with > 80% coverage, all mocks working  
+✅ **React Frontend Agent**: Monitoring page deployed to Azure  
+✅ **Azure Logic Apps Agent**: Pre-release and approval workflows functional  
+✅ **Power BI Agent**: Dashboards reporting on country data and pipeline health
+
+---
+
+## Appendix: File Structure Reference (Updated for Milestone 3)
+
+```
+/workspaces/cs-databricks/
+├── plans/
+│   ├── overview.md                           # ✅ This file (Milestone 3 in progress)
+│   ├── ci-cd-specialist.md                   # ✅ NEW - Agent-specific plan
+│   ├── databricks-agent.md                   # ✅ NEW - Agent-specific plan
+│   ├── python-notebook-agent.md              # ✅ NEW - Agent-specific plan
+│   ├── qa-agent.md                           # ✅ NEW - Agent-specific plan
+│   ├── react-frontend-agent.md               # ✅ NEW - Agent-specific plan
+│   ├── azure-logic-apps-agent.md             # ✅ NEW - Agent-specific plan
+│   └── power-bi-agent.md                     # ✅ NEW - Agent-specific plan
+├── .github/
+│   ├── agents/                               # All 7 agent.md files updated
+│   ├── instructions/                         # 5 new + existing
+│   └── workflows/                            # GitHub Actions (to be enhanced)
+├── .azuredevops/                             # Azure Pipelines (to be enhanced)
+├── src/
+│   ├── logging_config.py                     # (Phase 1 - Databricks Agent)
+│   ├── models/                               # (Phase 1 - Databricks Agent)
+│   ├── clients/                              # (Phase 1 - Databricks Agent)
+│   ├── database/                             # (Phase 1 - Databricks Agent)
+│   ├── data/
+│   │   ├── collectors/                       # (Phase 2 - Databricks Agent)
+│   │   ├── transformers/                     # (Phase 2 - Databricks Agent)
+│   │   └── delivery/                         # (Phase 2 - Databricks Agent)
+│   ├── notebooks/
+│   │   ├── country_stats_pipeline.ipynb      # (Phase 2 - Python Notebook Agent)
+│   │   └── data_quality_dashboard.ipynb      # (Phase 2 - Python Notebook Agent)
+│   └── monitoring/                           # (Phase 3 - React Frontend Agent)
+├── tests/
+│   ├── unit/                                 # (Phase 1/3 - QA Agent)
+│   ├── integration/                          # (Phase 3 - QA Agent)
+│   ├── schema/                               # (Phase 1 - QA Agent)
+│   ├── quality/                              # (Phase 3 - QA Agent)
+│   └── fixtures/                             # (Phase 1 - QA Agent)
+└── .azurelogicapps/                          # (Phase 4 - Azure Logic Apps Agent)
+```
+
+---
+
+**Document Status**: Milestone 3 Launched  
+**Next Milestone**: Milestone 4 (Final Integration & Validation)
