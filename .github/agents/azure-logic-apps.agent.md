@@ -17,8 +17,7 @@ Design and implement Azure Logic Apps workflows for pre-release cherry-picking, 
 
 - azure-logic-apps-power-automate.instructions.md
 - databricks-orchestration.instructions.md
-- azure-naming.instructions.md }
-  }
+- azure-naming.instructions.md
 
 ```
 
