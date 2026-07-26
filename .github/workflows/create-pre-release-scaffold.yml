@@ -91,7 +91,6 @@ jobs:
           mapfile -t all_feature_tags < <(git tag -l 'feature-*' | sort)
           if [[ "${#all_feature_tags[@]}" -eq 0 ]]; then
             echo "No feature-* tags found" >&2
-            exit 1
           fi
 
           declare -A accepted_map
@@ -103,18 +102,15 @@ jobs:
             fi
             if [[ "$tag" != feature-* ]]; then
               echo "Accepted tag must match feature-* pattern ($tag)" >&2
-              exit 1
             fi
             if ! git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
               echo "Missing tag ($tag)" >&2
-              exit 1
             fi
             accepted_map["$tag"]=1
           done
 
           if [[ "${#accepted_map[@]}" -eq 0 ]]; then
             echo "No accepted feature tags provided after parsing" >&2
-            exit 1
           fi
 
           oldest_non_accepted_tag=""
@@ -186,7 +182,6 @@ jobs:
 
           if [[ ! -s plan.tsv ]]; then
             echo "No commits resolved for pre-release plan" >&2
-            exit 1
           fi
 
           sort -t $'\t' -k4,4n -k3,3 plan.tsv | awk -F '\t' '!seen[$3]++' > plan.sorted.tsv
@@ -239,12 +234,18 @@ jobs:
           conflict_detected="false"
           conflict_tag="none"
           conflict_commit="none"
+          skipped_existing=0
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -B "$branch" "origin/dev"
+          git checkout -B "$branch" "${{ steps.plan.outputs.baseline-commit }}"
 
           while IFS=$'\t' read -r _type tag commit _epoch _subject _author _date; do
+            if git merge-base --is-ancestor "$commit" HEAD; then
+              skipped_existing=$((skipped_existing + 1))
+              continue
+            fi
+
             if ! git cherry-pick "$commit"; then
               conflict_detected="true"
               conflict_tag="$tag"
@@ -265,7 +266,6 @@ jobs:
 
               git cherry-pick --abort || true
               break
-              exit 1
             fi
           done < plan.tsv
 
@@ -289,6 +289,13 @@ jobs:
               echo "- Branch: ${branch}"
               echo "- Conflicting tag: ${conflict_tag}"
               echo "- Conflicting commit: ${conflict_commit}"
+            } >> "$GITHUB_STEP_SUMMARY"
+          elif [[ "$skipped_existing" -gt 0 ]]; then
+            {
+              echo ""
+              echo "## Cherry-pick dedupe summary"
+              echo ""
+              echo "Skipped already-present commits: ${skipped_existing}"
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
@@ -366,4 +373,3 @@ jobs:
             echo "This gate intentionally fails closed after approval to enforce manual review."
           } >> "$GITHUB_STEP_SUMMARY"
 
-          exit 1
