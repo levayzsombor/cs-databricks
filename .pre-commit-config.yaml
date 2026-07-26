@@ -1,27 +1,31 @@
+fail_fast: true
+
 repos:
-  - repo: local
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.4
     hooks:
       - id: ruff
         args: [--fix]
       - id: ruff-format
 
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: v3.12.0-2
+    hooks:
       - id: shfmt
-        name: shfmt
-        entry: shfmt -w -i 2 -ci
-        language: system
-        types: [shell]
+        args: [-w, -i, '2', -ci]
 
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.7
+    hooks:
+      - id: actionlint
+
+  - repo: local
+    hooks:
       - id: shellcheck
         name: shellcheck
         entry: shellcheck -e SC1091
         language: system
         types: [shell]
-
-      - id: actionlint
-        name: actionlint
-        entry: actionlint
-        language: system
-        files: ^\.github/workflows/.*\.ya?ml$
 
       - id: yamllint
         name: yamllint
@@ -32,7 +36,11 @@ repos:
       - id: eslint
         name: eslint
         entry: npx eslint --fix
+        language: system
+        files: ^.*\.(js|jsx|ts|tsx)$
 
       - id: prettier
         name: prettier
         entry: npx prettier --write
+        language: system
+        files: ^.*\.(js|jsx|ts|tsx|json|ya?ml|md)$

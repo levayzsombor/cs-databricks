@@ -21,7 +21,7 @@ jobs:
   update-ua-from-dev:
     runs-on: ubuntu-latest
 
-    steps:    
+    steps:
       - name: Login to Azure
         uses: azure/login@v2
         with:

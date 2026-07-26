@@ -18,11 +18,14 @@
     "ghcr.io/devcontainers/features/git:1": {},
     "ghcr.io/devcontainers/features/azure-cli:1": {},
     "ghcr.io/devcontainers/features/copilot-cli:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
     "ghcr.io/devcontainers/features/node:2": {},
     "ghcr.io/devcontainers-extra/features/shellcheck:1": {},
     "ghcr.io/devcontainers-extra/features/shfmt:1": {},
     "ghcr.io/devcontainers-extra/features/actionlint:1": {},
-    "ghcr.io/lentzi90/features/yamlfmt:0": {}
+    "ghcr.io/lentzi90/features/yamlfmt:0": {},
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {},
+    "ghcr.io/devcontainers/features/terraform:1": {}
   },
 
   // Use 'forwardPorts' to make a list of ports inside the container available locally.

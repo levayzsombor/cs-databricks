@@ -9,3 +9,8 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements-dev.txt
 npm i
+
+# Install Databricks CLI
+if ! command -v databricks >/dev/null 2>&1; then
+    curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sudo sh
+fi

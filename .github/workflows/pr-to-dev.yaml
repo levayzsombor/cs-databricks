@@ -52,6 +52,8 @@ jobs:
         run: bash .github/workflows/scripts/common/lint-format-check.sh
 
       - name: Run tests on local environment (on GitHub Job VM)
+        id: run_tests
+        continue-on-error: true
         run: bash .github/workflows/scripts/common/run-tests.sh
 
       - name: Login to Azure
@@ -64,3 +66,9 @@ jobs:
 
       - name: Run Azure DevOps pipeline to save test results to artifact storage
         run: bash .github/workflows/scripts/azure/save-test-results.sh
+
+      - name: Fail job if tests failed
+        if: always()
+        env:
+          TEST_STEP_OUTCOME: ${{ steps.run_tests.outcome }}
+        run: bash .github/workflows/scripts/common/failed-test.sh
