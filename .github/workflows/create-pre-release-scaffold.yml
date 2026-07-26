@@ -32,6 +32,9 @@ jobs:
       pull-requests: write
     outputs:
       pre-release-branch: ${{ steps.prepare.outputs.pre-release-branch }}
+      conflict-detected: ${{ steps.cherry-pick.outputs.conflict-detected }}
+      conflict-tag: ${{ steps.cherry-pick.outputs.conflict-tag }}
+      conflict-commit: ${{ steps.cherry-pick.outputs.conflict-commit }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -228,9 +231,14 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Create pre-release branch and cherry-pick commits (non-dry-run)
+        id: cherry-pick
         if: ${{ github.event.inputs.dry_run == 'false' }}
         run: |
           set -euo pipefail
+
+          conflict_detected="false"
+          conflict_tag="none"
+          conflict_commit="none"
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -238,6 +246,10 @@ jobs:
 
           while IFS=$'\t' read -r _type tag commit _epoch _subject _author _date; do
             if ! git cherry-pick "$commit"; then
+              conflict_detected="true"
+              conflict_tag="$tag"
+              conflict_commit="$commit"
+
               {
                 echo "## Cherry-pick conflict"
                 echo ""
@@ -252,6 +264,7 @@ jobs:
               } >> "$GITHUB_STEP_SUMMARY"
 
               git cherry-pick --abort || true
+              break
               exit 1
             fi
           done < plan.tsv
@@ -261,8 +274,26 @@ jobs:
           git commit -m "docs: add pre-release notes for ${branch}"
           git push origin "$branch"
 
+          {
+            echo "conflict-detected=${conflict_detected}"
+            echo "conflict-tag=${conflict_tag}"
+            echo "conflict-commit=${conflict_commit}"
+          } >> "$GITHUB_OUTPUT"
+
+          if [[ "$conflict_detected" == "true" ]]; then
+            {
+              echo ""
+              echo "## Manual resolution gate required"
+              echo ""
+              echo "Pre-release branch was pushed for manual conflict resolution."
+              echo "- Branch: ${branch}"
+              echo "- Conflicting tag: ${conflict_tag}"
+              echo "- Conflicting commit: ${conflict_commit}"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Create PR to staging (non-dry-run)
-        if: ${{ github.event.inputs.dry_run == 'false' }}
+        if: ${{ github.event.inputs.dry_run == 'false' && steps.cherry-pick.outputs.conflict-detected != 'true' }}
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         env:
           VERSION_BUMP: ${{ github.event.inputs.version_bump }}
@@ -303,3 +334,36 @@ jobs:
         run: |
           set -euo pipefail
           echo "Dry run complete. No branch or PR created."
+
+  manual-conflict-resolution-gate:
+    if: ${{ github.event.inputs.dry_run == 'false' && needs.create-pre-release.outputs.conflict-detected == 'true' }}
+    needs: create-pre-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    environment:
+      name: pre-release-conflict-resolution
+    steps:
+      - name: Require manual cherry-pick conflict resolution
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Manual conflict-resolution gate"
+            echo ""
+            echo "Cherry-pick conflict detected in pre-release generation."
+            echo ""
+            echo "- Branch: ${{ needs.create-pre-release.outputs.pre-release-branch }}"
+            echo "- Conflicting tag: ${{ needs.create-pre-release.outputs.conflict-tag }}"
+            echo "- Conflicting commit: ${{ needs.create-pre-release.outputs.conflict-commit }}"
+            echo ""
+            echo "### Required operator actions"
+            echo "1. Check out the pre-release branch and resolve the conflict manually."
+            echo "2. Complete the intended cherry-pick sequence and push the updated branch."
+            echo "3. Open or update a PR from the pre-release branch to staging."
+            echo "4. Re-run this workflow only after resolution if automation should continue."
+            echo ""
+            echo "This gate intentionally fails closed after approval to enforce manual review."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          exit 1

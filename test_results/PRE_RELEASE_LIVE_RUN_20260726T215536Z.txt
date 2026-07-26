@@ -1,0 +1,20 @@
+Pre-release live validation
+Timestamp: 20260726T215536Z
+Accepted feature tags: feature-test
+Version bump: MINOR
+Oldest non-accepted feature tag: none
+Baseline commit: ae82b75188e0d2177d28d4411e1bf704829ac123
+Planned commit count: 1
+Local branch: pre-release-local-20260726T215536Z
+Cherry-pick status: failed:feature-test:0d6b93f08ea37bf9ae4e9a777f997347bad24f9a
+---
+# Pre-release Notes
+
+Version bump: MINOR
+Baseline commit: ae82b75188e0d2177d28d4411e1bf704829ac123
+Oldest non-accepted feature tag: none
+
+## Included changes
+
+- [feature] feature-test (0d6b93f) - added extension (Zsombor Levay, 2026-07-18)
+Live-run simulation complete. Push/PR intentionally skipped in local validation.
