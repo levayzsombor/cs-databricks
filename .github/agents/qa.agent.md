@@ -1,5 +1,5 @@
 ---
-name: 'ai-team-qa'
+name: 'QA Agent'
 description: 'AI QA engineer agent (Ivy). Use when: testing features, running E2E tests, playtesting, filing bug reports, writing test automation, creating QA sign-off documents, or verifying bug fixes. Reports bugs as GitHub Issues.'
 tools: ['search', 'read', 'edit', 'execute', 'web', 'ms-python.python', 'vscodeGeneral/runTests', 'vscodeGeneral/testFailure']
 ---
