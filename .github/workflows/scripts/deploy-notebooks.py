@@ -9,7 +9,7 @@ import argparse
 import json
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from databricks.sdk import WorkspaceClient
@@ -29,7 +29,7 @@ def deploy_notebooks(environment, branch, databricks_host):
     deployment_info = {
         "environment": environment,
         "branch": branch,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "databricks_host": databricks_host,
         "notebooks_deployed": [],
         "failures": [],

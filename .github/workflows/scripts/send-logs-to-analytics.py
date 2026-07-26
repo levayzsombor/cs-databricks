@@ -11,7 +11,7 @@ import hmac
 import json
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import requests
 
@@ -23,7 +23,7 @@ def send_to_log_analytics(workspace_id, workspace_key, environment, status, depl
     deployment_data = {}
     if os.path.exists(deployment_result_file):
         try:
-            with open(deployment_result_file, "r") as f:
+            with open(deployment_result_file) as f:
                 deployment_data = json.load(f)
         except Exception as e:
             print(f"⚠️ Could not read deployment result: {e}")
@@ -32,7 +32,7 @@ def send_to_log_analytics(workspace_id, workspace_key, environment, status, depl
     log_entry = {
         "environment": environment,
         "status": status,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "deployment": deployment_data,
         "workflow_run_id": os.getenv("GITHUB_RUN_ID"),
         "workflow_run_number": os.getenv("GITHUB_RUN_NUMBER"),
@@ -48,7 +48,7 @@ def send_to_log_analytics(workspace_id, workspace_key, environment, status, depl
     body = json_data.encode("utf-8")
 
     # Create authorization signature
-    rfc1123date = datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT")
+    rfc1123date = datetime.now(UTC).strftime("%a, %d %b %Y %H:%M:%S GMT")
     content_length = len(body)
 
     try:

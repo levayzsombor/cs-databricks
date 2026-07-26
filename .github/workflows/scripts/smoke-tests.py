@@ -4,10 +4,10 @@ Smoke tests for Databricks environment.
 Quick validation that critical notebooks and jobs are working.
 """
 
-import os
 import argparse
+import os
 import sys
-import time
+
 from databricks.sdk import WorkspaceClient
 
 
@@ -56,7 +56,7 @@ def smoke_tests(environment, databricks_host):
                 "error": "No notebooks found",
             })
             test_results["failed"] += 1
-            print(f"   ⚠️ WARNING: No notebooks found\n")
+            print("   ⚠️ WARNING: No notebooks found\n")
     except Exception as e:
         test_results["tests"].append({"name": "Notebook accessibility", "status": "FAILED", "error": str(e)})
         test_results["failed"] += 1

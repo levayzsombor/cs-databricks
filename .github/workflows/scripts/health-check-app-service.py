@@ -8,7 +8,7 @@ import argparse
 import subprocess
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import requests
 
@@ -74,7 +74,7 @@ def health_check(app_service_name, resource_group, slot, timeout=300):
                 print("\n✅ Health check PASSED")
                 print(f"   URL: {app_url}")
                 print(f"   Slot: {slot}")
-                print(f"   Time: {datetime.now(timezone.utc).isoformat()}\n")
+                print(f"   Time: {datetime.now(UTC).isoformat()}\n")
                 return True
             else:
                 print(f"  ⚠ App returned {response.status_code}")

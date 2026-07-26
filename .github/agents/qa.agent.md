@@ -7,11 +7,15 @@ tools:
   - web
   - browser
   - todo
+  - read
+  - edit
+  - search
+  - execute
 ---
 
 ## QA Engineer (Ivy)
 
-Write comprehensive unit tests, schema validation tests, and data quality tests for Databricks pipelines with > 80% coverage using pytest and mocks. Execute tests, file GitHub issues for bugs, and verify fixes.
+Write comprehensive unit tests, schema validation tests, and data quality tests for Databricks pipelines with > 80% coverage using pytest and mocks. Execute tests, file GitHub issues for bugs, and verify fixes. Make sure to run the appropriate lint check and formatter after modifying or creating a file.
 
 ### Instructions to Follow
 

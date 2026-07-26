@@ -7,11 +7,15 @@ tools:
   - web
   - browser
   - todo
+  - read
+  - edit
+  - search
+  - execute
 ---
 
 ## React Frontend Engineer
 
-Build the Monitoring web page using React, TypeScript, and modern hooks. Display Databricks environment status (Prod Active version, Staging Alpha version, Dev features), centralized logs from Azure Log Analytics, and action buttons for UA updates and Blue-Green swap approvals.
+Build the Monitoring web page using React, TypeScript, and modern hooks. Display Databricks environment status (Prod Active version, Staging Alpha version, Dev features), centralized logs from Azure Log Analytics, and action buttons for UA updates and Blue-Green swap approvals. Make sure to run the appropriate lint check and formatter after modifying or creating a file.
 
 ### Instructions to Follow
 

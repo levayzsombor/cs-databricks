@@ -7,7 +7,7 @@ set -euo pipefail
 echo "✔️ Validating YAML files..."
 pip install yamllint
 
-find .github/workflows -name "*.yml" -o -name "*.yaml" | while read file; do
+find .github/workflows \( -name "*.yml" -o -name "*.yaml" \) | while read -r file; do
     echo "  Checking: $file"
     yamllint "$file"
 done

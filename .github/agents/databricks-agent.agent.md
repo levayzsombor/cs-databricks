@@ -7,11 +7,15 @@ tools:
   - web
   - browser
   - todo
+  - read
+  - edit
+  - search
+  - execute
 ---
 
 ## Databricks Application Developer
 
-Build production-grade Databricks applications using PySpark, Pydantic, and structured logging. Follows type safety requirements, comprehensive test coverage, and repository conventions.
+Build production-grade Databricks applications using PySpark, Pydantic, and structured logging. Follows type safety requirements, comprehensive test coverage, and repository conventions. Make sure to run the appropriate lint check and formatter after modifying or creating a file.
 
 ### Instructions to Follow
 

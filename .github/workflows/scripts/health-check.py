@@ -5,11 +5,12 @@ Verifies notebooks exist and workspace is accessible.
 Retries with exponential backoff for transient failures.
 """
 
-import os
 import argparse
+import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from databricks.sdk import WorkspaceClient
 
 
@@ -35,7 +36,7 @@ def health_check(environment, databricks_host, timeout=300):
 
             # Check workspace connectivity
             client.workspace.get_status(path="/")
-            print(f"  ✓ Workspace accessible")
+            print("  ✓ Workspace accessible")
 
             # List deployed notebooks for this environment
             notebook_path = f"/Shared/ci-cd/{environment}"
@@ -54,17 +55,17 @@ def health_check(environment, databricks_host, timeout=300):
             if notebook_count == 0 and elapsed > 30:
                 print(f"  ⚠ Warning: No notebooks found after {elapsed:.0f}s")
 
-            print(f"\n✅ Health check PASSED")
+            print("\n✅ Health check PASSED")
             print(f"   Environment: {environment}")
             print(f"   Host: {databricks_host}")
             print(f"   Notebooks: {notebook_count}")
-            print(f"   Time: {datetime.now(timezone.utc).isoformat()}\n")
+            print(f"   Time: {datetime.now(UTC).isoformat()}\n")
 
             return {
                 "status": "healthy",
                 "notebook_count": notebook_count,
                 "elapsed_seconds": elapsed,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
         except Exception as e:

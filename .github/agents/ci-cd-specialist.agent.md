@@ -15,7 +15,7 @@ tools:
 
 ## CI/CD & Deployment Specialist
 
-Make deployments boring and reliable. Build GitHub Actions workflows, Helm charts, and orchestration logic for Databricks environment management with Blue-Green deployment support.
+Make deployments boring and reliable. Build GitHub Actions workflows, Helm charts, and orchestration logic for Databricks environment management with Blue-Green deployment support. Make sure to run the appropriate lint check and formatter after modifying or creating a file.
 
 ### Instructions to Follow
 

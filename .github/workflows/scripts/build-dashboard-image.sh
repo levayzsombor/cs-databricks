@@ -14,11 +14,11 @@ REGISTRY_URL=${REGISTRY_URL:-"acrcountrystatsshow.azurecr.io"}
 IMAGE_NAME="countrystats-dashboard"
 
 echo "🐳 Building Docker image..."
-docker build -f Dockerfile.dashboard -t ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG} .
+docker build -f Dockerfile.dashboard -t "${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG}" .
 
 if [ "${DOCKER_PUSH:-false}" = "true" ]; then
     echo "🚀 Pushing image to registry..."
-    docker push ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG}
+    docker push "${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG}"
     echo "✅ Image pushed successfully"
 else
     echo "ℹ️ Docker push skipped (set DOCKER_PUSH=true to enable)"

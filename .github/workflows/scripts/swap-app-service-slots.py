@@ -7,7 +7,7 @@ Safely switches production traffic to staging slot.
 import argparse
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 def swap_slots(app_service_name, resource_group):
@@ -60,7 +60,7 @@ def swap_slots(app_service_name, resource_group):
         state = result.stdout.strip()
 
         print(f"✅ App Service state: {state}")
-        print(f"   Timestamp: {datetime.now(timezone.utc).isoformat()}\n")
+        print(f"   Timestamp: {datetime.now(UTC).isoformat()}\n")
 
         return True
 

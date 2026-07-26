@@ -23,10 +23,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'
 
@@ -37,29 +37,17 @@ jobs:
         id: check-blue
         env:
           DATABRICKS_PAT: ${{ secrets.DATABRICKS_BLUE_PAT }}
-        run: |
-          python .github/workflows/scripts/health-check.py \
-            --environment blue \
-            --databricks-host ${{ env.BLUE_HOST }} \
-            --timeout 60 && echo "healthy=true" >> $GITHUB_OUTPUT || echo "healthy=false" >> $GITHUB_OUTPUT
+        run: .github/workflows/scripts/ci_swap_check_env_health.sh blue "${{ env.BLUE_HOST }}" 60
 
       - name: Verify GREEN environment health
         id: check-green
         env:
           DATABRICKS_PAT: ${{ secrets.DATABRICKS_GREEN_PAT }}
-        run: |
-          python .github/workflows/scripts/health-check.py \
-            --environment green \
-            --databricks-host ${{ env.GREEN_HOST }} \
-            --timeout 60 && echo "healthy=true" >> $GITHUB_OUTPUT || echo "healthy=false" >> $GITHUB_OUTPUT
+        run: .github/workflows/scripts/ci_swap_check_env_health.sh green "${{ env.GREEN_HOST }}" 60
 
       - name: Fail if either environment unhealthy
         if: steps.check-blue.outputs.healthy != 'true' || steps.check-green.outputs.healthy != 'true'
-        run: |
-          echo "❌ Health checks failed!"
-          echo "BLUE: ${{ steps.check-blue.outputs.healthy }}"
-          echo "GREEN: ${{ steps.check-green.outputs.healthy }}"
-          exit 1
+        run: .github/workflows/scripts/ci_swap_fail_if_unhealthy.sh "${{ steps.check-blue.outputs.healthy }}" "${{ steps.check-green.outputs.healthy }}"
 
   perform-swap:
     needs: pre-swap-verification
@@ -69,85 +57,31 @@ jobs:
 
     steps:
       - name: Setup Azure CLI
-        uses: azure/login@v2
+        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Get current Traffic Manager configuration
         id: current-config
-        run: |
-          # Query Traffic Manager to see which environment is active
-          ACTIVE_ENV=$(az network traffic-manager endpoint show \
-            --name "blue-endpoint" \
-            --profile-name "tm-countrystats-prod" \
-            --resource-group "countrystats-showcase" \
-            --type "externalEndpoints" \
-            --query "properties.endpointStatus" -o tsv)
-
-          if [ "$ACTIVE_ENV" = "Enabled" ]; then
-            echo "active-env=blue" >> $GITHUB_OUTPUT
-            echo "standby-env=green" >> $GITHUB_OUTPUT
-          else
-            echo "active-env=green" >> $GITHUB_OUTPUT
-            echo "standby-env=blue" >> $GITHUB_OUTPUT
-          fi
+        run: .github/workflows/scripts/ci_swap_get_current_config.sh tm-countrystats-prod countrystats-showcase
 
       - name: Disable active endpoint
-        run: |
-          az network traffic-manager endpoint update \
-            --name "${{ steps.current-config.outputs.active-env }}-endpoint" \
-            --profile-name "tm-countrystats-prod" \
-            --resource-group "countrystats-showcase" \
-            --type "externalEndpoints" \
-            --endpoint-status "Disabled"
-
-          echo "Disabled ${{ steps.current-config.outputs.active-env }} endpoint"
+        run: .github/workflows/scripts/ci_swap_update_endpoint.sh tm-countrystats-prod countrystats-showcase "${{ steps.current-config.outputs.active-env }}" Disabled
 
       - name: Enable standby endpoint
-        run: |
-          az network traffic-manager endpoint update \
-            --name "${{ steps.current-config.outputs.standby-env }}-endpoint" \
-            --profile-name "tm-countrystats-prod" \
-            --resource-group "countrystats-showcase" \
-            --type "externalEndpoints" \
-            --endpoint-status "Enabled"
-
-          echo "Enabled ${{ steps.current-config.outputs.standby-env }} endpoint"
+        run: .github/workflows/scripts/ci_swap_update_endpoint.sh tm-countrystats-prod countrystats-showcase "${{ steps.current-config.outputs.standby-env }}" Enabled
 
       - name: Verify swap
-        run: |
-          sleep 30  # Wait for DNS propagation
-
-          # Verify the new active endpoint is healthy
-          NEW_STATUS=$(az network traffic-manager endpoint show \
-            --name "${{ steps.current-config.outputs.standby-env }}-endpoint" \
-            --profile-name "tm-countrystats-prod" \
-            --resource-group "countrystats-showcase" \
-            --type "externalEndpoints" \
-            --query "properties.endpointStatus" -o tsv)
-
-          if [ "$NEW_STATUS" != "Enabled" ]; then
-            echo "❌ Swap verification failed!"
-            exit 1
-          fi
-
-          echo "✅ Swap verified successfully"
-          echo "Active environment: ${{ steps.current-config.outputs.standby-env }}"
+        run: .github/workflows/scripts/ci_swap_verify.sh tm-countrystats-prod countrystats-showcase "${{ steps.current-config.outputs.standby-env }}" 30
 
       - name: Send swap event to Log Analytics
         if: always()
         env:
           LOG_ANALYTICS_WORKSPACE_KEY: ${{ secrets.LOG_ANALYTICS_WORKSPACE_KEY }}
-        run: |
-          python .github/workflows/scripts/send-logs-to-analytics.py \
-            --workspace-id ${{ env.LOG_ANALYTICS_WORKSPACE_ID }} \
-            --workspace-key ${{ env.LOG_ANALYTICS_WORKSPACE_KEY }} \
-            --environment prod \
-            --status "swap_${{ steps.current-config.outputs.standby-env }}_active" \
-            --deployment-result "{}"
+        run: .github/workflows/scripts/ci_send_logs.sh "${{ env.LOG_ANALYTICS_WORKSPACE_ID }}" "${{ env.LOG_ANALYTICS_WORKSPACE_KEY }}" prod "swap_${{ steps.current-config.outputs.standby-env }}_active" "{}"
 
       - name: Create GitHub Release
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
             github.rest.repos.createRelease({

@@ -4,12 +4,12 @@ Deploy Docker image to Azure App Service.
 Handles slot deployment for Blue-Green strategy.
 """
 
-import os
-import json
 import argparse
-import sys
+import json
+import os
 import subprocess
-from datetime import datetime, timezone
+import sys
+from datetime import UTC, datetime
 
 
 def deploy_to_app_service(app_service_name, resource_group, image_url, slot, acr_username, acr_password):
@@ -20,12 +20,12 @@ def deploy_to_app_service(app_service_name, resource_group, image_url, slot, acr
         "resource_group": resource_group,
         "image_url": image_url,
         "slot": slot,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "status": "pending",
     }
 
     try:
-        print(f"🚀 Deploying image to App Service...")
+        print("🚀 Deploying image to App Service...")
         print(f"   App Service: {app_service_name}")
         print(f"   Resource Group: {resource_group}")
         print(f"   Slot: {slot}")
@@ -59,7 +59,7 @@ def deploy_to_app_service(app_service_name, resource_group, image_url, slot, acr
         if result.returncode != 0:
             raise Exception(f"Azure CLI failed: {result.stderr}")
 
-        print(f"✅ Docker image configured on App Service")
+        print("✅ Docker image configured on App Service")
 
         # Wait for deployment to complete
         print(f"⏳ Waiting for App Service to restart ({slot} slot)...")
@@ -84,9 +84,9 @@ def deploy_to_app_service(app_service_name, resource_group, image_url, slot, acr
 
         deployment_info["status"] = "success"
         deployment_info["app_state"] = state
-        deployment_info["deployment_time"] = datetime.now(timezone.utc).isoformat()
+        deployment_info["deployment_time"] = datetime.now(UTC).isoformat()
 
-        print(f"✅ Deployment completed")
+        print("✅ Deployment completed")
         print(f"   App State: {state}\n")
 
         return deployment_info

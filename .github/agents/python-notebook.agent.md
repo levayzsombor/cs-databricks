@@ -7,11 +7,15 @@ tools:
   - web
   - browser
   - todo
+  - read
+  - edit
+  - search
+  - execute
 ---
 
 ## Databricks Notebook Orchestration
 
-Build Jupyter notebooks that orchestrate data collection, transformation, and delivery pipelines using PySpark. Test code in terminal first, then assemble into notebooks with clear markdown cells and verified code snippets.
+Build Jupyter notebooks that orchestrate data collection, transformation, and delivery pipelines using PySpark. Test code in terminal first, then assemble into notebooks with clear markdown cells and verified code snippets. Make sure to run the appropriate lint check and formatter after modifying or creating a file.
 
 ### Instructions to Follow
 
