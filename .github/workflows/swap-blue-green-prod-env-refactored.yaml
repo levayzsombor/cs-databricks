@@ -8,6 +8,9 @@ on:
         required: false
         default: 'false'
 
+permissions:
+  contents: read
+
 env:
   LOG_ANALYTICS_WORKSPACE_ID: 7d0cb39c-348d-4863-91e1-efefc333fc11
   BLUE_HOST: https://adb-7405606075384170.10.azuredatabricks.net
@@ -17,6 +20,8 @@ jobs:
   pre-swap-verification:
     runs-on: ubuntu-latest
     if: github.event.inputs.force_swap != 'true'
+    permissions:
+      contents: read
     outputs:
       blue-healthy: ${{ steps.check-blue.outputs.healthy }}
       green-healthy: ${{ steps.check-green.outputs.healthy }}
@@ -53,6 +58,8 @@ jobs:
     needs: pre-swap-verification
     if: always() # Run even if pre-swap-verification was skipped
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     environment: production # Require approval
 
     steps:

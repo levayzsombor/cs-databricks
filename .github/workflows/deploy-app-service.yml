@@ -16,6 +16,9 @@ concurrency:
   group: 'deploy-app-service-${{ github.ref }}'
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 env:
   LOG_ANALYTICS_WORKSPACE_ID: 7d0cb39c-348d-4863-91e1-efefc333fc11
   REGISTRY_URL: acrcountrystatsshow.azurecr.io
@@ -24,6 +27,8 @@ env:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     environment:
       name: ${{ github.ref == 'refs/heads/prod' && 'production' || 'staging' }}
 

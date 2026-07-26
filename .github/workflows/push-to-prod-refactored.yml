@@ -11,12 +11,17 @@ concurrency:
   group: 'push-to-prod'
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 env:
   LOG_ANALYTICS_WORKSPACE_ID: 7d0cb39c-348d-4863-91e1-efefc333fc11
 
 jobs:
   determine-target:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       target-env: ${{ steps.determine.outputs.target-env }}
       databricks-host: ${{ steps.determine.outputs.databricks-host }}
@@ -30,6 +35,10 @@ jobs:
     if: github.event.pull_request.merged == true
     needs: determine-target
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+      issues: write
     environment:
       name: production # Require approval for production
 

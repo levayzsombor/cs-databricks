@@ -22,249 +22,105 @@ Build and maintain CI/CD pipelines, GitHub Actions workflows, Helm charts, and B
 
 ---
 
-## Phase 1: Foundation & Infrastructure (Week 1-2)
+## Status Matrix (Current)
 
-### Task 1.1: GitHub Actions Workflows Setup
-
-**Objective**: Verify and enhance existing GitHub Actions workflows for branch protection and tag creation
-
-**Steps**:
-
-1. Review existing `.github/workflows/` files
-2. Verify feature → dev workflow (creates feature-* tag)
-3. Verify hotfix → dev/staging workflow (creates hotfix-* tag)
-4. Verify staging → prod workflow (creates version-* tag)
-5. Add logging to all workflow steps (timestamps, step names, results)
-6. Test tag creation on merge to protected branches
-
-**Deliverables**:
-
-- ✅ Working GitHub Actions workflows for all branch merges
-- ✅ Structured logging in workflow steps
-- ✅ Tag creation verified on dev/staging/prod merges
-
-**Dependencies**:
-
-- GitHub repository access with branch protection configured
-- Understanding of feature/hotfix/version tagging scheme from overview.md
-
-**Success Criteria**:
-
-- All workflows execute without errors
-- Tags are created automatically on merge
-- Logs include timestamp and execution context
+| Area                                  | Status                                    | Evidence in Repository                                                                                                               | Remaining Work                                                                                  |
+| ------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| Workflow refactor + script extraction | ✅ Completed                              | `.github/workflows/push-to-*.yml`, `.github/workflows/swap-blue-green-prod-env-refactored.yaml`, `.github/workflows/scripts/ci_*.sh` | Keep script interfaces stable and documented                                                    |
+| Workflow lint validity                | ✅ Completed                              | `actionlint` clean on workflow set                                                                                                   | Keep green after each workflow change                                                           |
+| Workflow token permissions hardening  | ✅ Completed                              | `permissions` added to all active workflows                                                                                          | Periodically tighten per-step if scopes can be reduced                                          |
+| App Service dashboard deploy pipeline | ✅ Completed                              | `.github/workflows/deploy-app-service.yml`                                                                                           | Optional: remove tolerant test/lint behavior (`                                                 |     | true`) when frontend stabilizes |
+| Blue-Green manual swap workflow       | 🟨 Partial                                | `.github/workflows/swap-blue-green-prod-env-refactored.yaml`                                                                         | Finalize governance around production approvals and rollback drills                             |
+| Pre-release cherry-pick orchestration | 🟨 Implemented (needs runtime validation) | `.github/workflows/create-pre-release-scaffold.yml`                                                                                  | Validate on repo data with dry-run + live-run, then tune conflict policy and edge-case handling |
+| Helm environment coverage             | 🟨 Partial                                | `helm/app-service`, `helm/databricks-jobs`                                                                                           | Verify full DEV/UA/Staging/Prod values strategy and run `helm lint` gates                       |
+| Log Analytics operational readiness   | 🟨 Partial                                | `ci_send_logs.sh`, `send-logs-to-analytics.py`, `kql-queries.md`                                                                     | Add infra automation/validation for alerts + workspace setup                                    |
 
 ---
 
-### Task 1.2: Helm Charts for Environments
+## Completed Work
 
-**Objective**: Create/update Helm charts for DEV, UA, Staging, and Prod environments
-
-**Steps**:
-
-1. Create base Helm chart in `.helm/databricks/` with values for:
-   - DEV environment (auto-update on dev branch)
-   - UA environment (manual update via Monitoring page)
-   - Staging environment (auto-update on staging branch)
-   - Prod (Blue/Green) environments
-2. Define resource limits (CPU, memory) per environment
-3. Add sidecar for centralized logging to Azure Log Analytics
-4. Configure health checks (liveness, readiness probes)
-5. Define image pull policy and container registry
-
-**Deliverables**:
-
-- ✅ Helm chart templates for all 5 environments
-- ✅ Values files per environment
-- ✅ Logging sidecar configuration
-
-**Dependencies**:
-
-- Azure Kubernetes Service (AKS) cluster ready
-- Container registry configured
-- Python agents' Docker image ready (later dependency)
-
-**Success Criteria**:
-
-- Helm charts validate with `helm lint`
-- All environments have appropriate resource limits
-- Logging sidecar can connect to Azure Log Analytics
+1. Refactored main deployment workflows to reusable shell scripts.
+2. Added shell safety and argument validation in CI helper scripts.
+3. Fixed YAML and shell lint issues across active CI/CD files.
+4. Added explicit least-privilege `permissions` blocks to workflow files.
+5. Added pre-release workflow with deterministic commit planning, cherry-pick execution, conflict reporting, and generated release notes.
 
 ---
 
-### Task 1.3: Azure Log Analytics Integration
-
-**Objective**: Configure centralized structured logging to Azure Log Analytics
-
-**Steps**:
-
-1. Create/verify Azure Log Analytics workspace
-2. Define structured logging format (JSON with timestamp, severity, agent, context)
-3. Configure logging pipeline:
-   - Python agents → loguru → fluent-bit/filebeat → Log Analytics
-   - GitHub Actions → Log Analytics (via Azure DevOps integration)
-   - Helm pods → sidecar → Log Analytics
-4. Create KQL queries for:
-   - Errors by environment
-   - Warnings by data source
-   - Pipeline execution metrics
-5. Set up alerts for error thresholds
-
-**Deliverables**:
-
-- ✅ Log Analytics workspace configured
-- ✅ Logging pipeline working for all sources
-- ✅ KQL queries for common use cases
-- ✅ Alerts configured
-
-**Dependencies**:
-
-- Azure subscription with Log Analytics service
-- Python logging configuration from Python agents
-- Helm charts for sidecar deployment
-
-**Success Criteria**:
-
-- Logs appear in Log Analytics within 1 minute of generation
-- Severity levels (Info/Warning/Error) are visible
-- Queries return expected results
-
----
-
-## Phase 4: Orchestration & Deployment (Week 3-4)
-
-### Task 4.1: Blue-Green Deployment Orchestration
-
-**Objective**: Implement Blue-Green deployment for Prod environment with manual swap approval
-
-**Steps**:
-
-1. Design Prod (Blue/Green) environment architecture in Azure:
-   - Load balancer/traffic manager routing
-   - Active/inactive environment tracking
-   - Helm releases for Blue and Green
-2. Create deployment workflow:
-   - On prod branch merge: deploy to inactive environment (Green)
-   - Health checks on Green environment
-   - Manual approval UI in Monitoring page triggers swap
-   - Swap routing from Blue to Green
-   - Mark old Blue as Green (backup)
-3. Implement rollback capability:
-   - If health checks fail, abort deployment
-   - If swap fails, revert traffic back to Blue
-4. Document deployment procedure and troubleshooting
-
-**Deliverables**:
-
-- ✅ Blue-Green environment setup in Azure
-- ✅ Automated deployment to Green on prod merge
-- ✅ Health check integration
-- ✅ Manual swap approval mechanism
-- ✅ Rollback procedures documented
-
-**Dependencies**:
-
-- Azure Logic Apps Agent for approval workflow
-- React Frontend Agent for approval UI
-- Prod environment with Blue/Green load balancing
-
-**Success Criteria**:
-
-- Prod deployment to Green completes in < 5 minutes
-- Health checks validate Green environment
-- Swap completes in < 2 minutes
-- Rollback works if swap fails
-
----
+## In-Progress Work
 
 ### Task 4.2: Pre-Release Cherry-Pick Automation
 
-**Objective**: Automate pre-release branch creation and staging deployment
+**Current state**: core automation implemented and lint-clean; runtime validation remains.
 
-**Steps**:
+**Implemented now**:
 
-1. Design pre-release workflow:
-   - Manual trigger from Monitoring page (list of accepted features)
-   - Cherry-pick selected feature commits to pre-release branch
-   - Auto-generate release notes from commit messages
-   - Create PR from pre-release to staging
-   - Auto-merge creates alpha-version-* tag
-2. Implement cherry-pick mechanism:
-   - GitHub API to fetch commit history
-   - Automate rebase of selected commits
-   - Handle merge conflicts (notify on Slack)
-3. Create release notes generator:
-   - Parse commit messages for feature descriptions
-   - Format as changelog
-   - Include merged dates and authors
+- Manual trigger with `accepted_feature_tags`, `version_bump`, `dry_run`
+- Baseline selection from oldest non-accepted feature tag
+- Deterministic commit ordering across `feature-*`, `hotfix-*`, and `version-*` tags
+- Cherry-pick execution with conflict summary on failure
+- Release-note generation and PR body enrichment
+- Optional branch push and PR creation to `staging`
 
-**Deliverables**:
+**Still required**:
 
-- ✅ Pre-release branch creation workflow
-- ✅ Cherry-pick automation
-- ✅ Automatic release notes generation
-- ✅ Staging deployment on alpha-version tag
-
-**Dependencies**:
-
-- React Frontend Agent for pre-release UI
-- Azure Logic Apps Agent for orchestration
-- GitHub API access
-
-**Success Criteria**:
-
-- Pre-release creation completes in < 3 minutes
-- Cherry-picked commits are correct
-- Release notes are readable and accurate
-- Staging deployment triggered on merge
+1. Execute dry-run and non-dry-run validation with representative tag sets.
+2. Add automated fallback/notification strategy for cherry-pick conflicts.
+3. Finalize how merged-feature tags and alpha-version tags are linked post-merge.
+4. Add regression checks for edge cases (missing tags, duplicate commits, empty plan).
 
 ---
 
-## Cross-Agent Dependencies
+## Next Actions (Priority Ordered)
 
-**Blocks**:
-
-- Blocked by: Databricks Agent (Docker image ready for Helm deployment)
-- Blocks: React Frontend Agent (needs Monitoring page UI for approval)
-
-**Depends On**:
-
-- Azure infrastructure (subscription, AKS, Log Analytics) - must be provided by user
-- Python agents' Docker image for Helm deployment
+1. Run end-to-end dry-run/live validation for pre-release workflow.
+2. Add post-merge staging alpha tag + merged-feature tag automation linkage.
+3. Add workflow tests/checks for the pre-release path (`dry_run` and real modes).
+4. Validate Helm charts with explicit lint/deploy checks and capture outputs in docs.
+5. Add/update runbook with operational playbooks for swap rollback and pre-release conflicts.
 
 ---
 
-## Success Criteria for Milestone 3
+## Dependencies and Blockers
 
-✅ All GitHub Actions workflows execute without errors  
-✅ Tags are created automatically on protected branch merges  
-✅ Helm charts deploy successfully to all 5 environments  
-✅ Centralized logging flows to Azure Log Analytics  
-✅ Blue-Green deployment works with manual approval  
-✅ Pre-release cherry-pick automation is functional
+**External dependencies**:
+
+- Azure subscription resources and operational access
+- Monitoring UI integration for trigger/approval UX
+- Repository governance decisions on approval policies
+
+**Current blockers**:
+
+- No hard technical blocker for scaffold completion.
+- Production-ready pre-release orchestration depends on agreed conflict policy and approval process.
 
 ---
 
-## Risks & Mitigations
+## Progress Log
 
-| Risk                              | Mitigation                                                |
-| --------------------------------- | --------------------------------------------------------- |
-| Azure infrastructure not ready    | Document required resources; create setup guide for user  |
-| Helm chart deployment fails       | Test locally with Minikube first; validate with helm lint |
-| Blue-Green swap causes downtime   | Implement health checks; test swap procedure in staging   |
-| Pre-release cherry-pick conflicts | Provide conflict resolution UI; notify on merge conflicts |
-| Log volume too high               | Implement log sampling; set retention policies early      |
+### 2026-07-26
+
+- Verified workflow syntax and lint status with `actionlint`.
+- Consolidated workflow shell logic into `.github/workflows/scripts/ci_*.sh`.
+- Added least-privilege permissions to active workflows.
+- Added pre-release scaffold workflow: `.github/workflows/create-pre-release-scaffold.yml`.
+- Updated CI/CD plan to reflect real completion state (completed vs partial vs pending).
+- Productionized pre-release workflow internals (deterministic planning, cherry-pick, conflict summary, release notes).
+- Configured devcontainer persistent auth mounts/env forwarding for gh, git, az, and databricks CLIs.
+- Added startup auth-check helper script: `.devcontainer/post-start-auth-check.sh`.
 
 ---
 
 ## Handoff Checklist
 
-- [ ] GitHub Actions workflows verified and enhanced
-- [ ] Helm charts created for all 5 environments
-- [ ] Azure Log Analytics configured and working
-- [ ] Blue-Green deployment setup in Azure
-- [ ] Pre-release cherry-pick automation functional
-- [ ] Documentation written for deployment procedures
-- [ ] All workflows tested end-to-end
+- [x] GitHub Actions workflows verified and enhanced
+- [ ] Helm charts validated for full 5-environment strategy
+- [ ] Azure Log Analytics fully validated with alerts and operational checks
+- [x] Blue-Green deployment workflow implemented (manual swap path)
+- [ ] Blue-Green approval + rollback drills documented and verified with operations
+- [x] Pre-release automation scaffold created
+- [x] Pre-release automation productionized (full cherry-pick + release-note logic)
+- [ ] Pre-release workflow validated with live repository runs
+- [ ] End-to-end CI/CD rehearsal completed and documented
 
-**When Complete**: Report back to Repository Planner with completion status and any blockers.
+**When each item changes**: update this file on the same day with a new entry under "Progress Log".

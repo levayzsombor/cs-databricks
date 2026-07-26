@@ -1,0 +1,305 @@
+name: 'Create pre-release branch'
+
+on:
+  workflow_dispatch:
+    inputs:
+      accepted_feature_tags:
+        description: 'Comma-separated feature tags to cherry-pick (example: feature-a,feature-b)'
+        required: true
+      version_bump:
+        description: 'Requested version bump label for downstream staging PR'
+        required: true
+        default: 'MINOR'
+        type: choice
+        options:
+          - MAJOR
+          - MINOR
+          - PATCH
+      dry_run:
+        description: 'If true, prepare summary only and do not push branch or create PR'
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  create-pre-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      pre-release-branch: ${{ steps.prepare.outputs.pre-release-branch }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Prepare branch metadata
+        id: prepare
+        run: |
+          set -euo pipefail
+          branch_name="pre-release-$(date +%Y%m%d-%H%M%S)"
+
+          {
+            echo "pre-release-branch=$branch_name"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "branch=$branch_name"
+            echo "accepted_feature_tags=${{ github.event.inputs.accepted_feature_tags }}"
+            echo "version_bump=${{ github.event.inputs.version_bump }}"
+          } >> "$GITHUB_ENV"
+
+      - name: Build deterministic cherry-pick plan
+        id: plan
+        run: |
+          set -euo pipefail
+
+          tag_commit() {
+            local tag="$1"
+            git rev-list -n 1 "refs/tags/$tag"
+          }
+
+          tag_epoch() {
+            local commit="$1"
+            git show -s --format=%ct "$commit"
+          }
+
+          tag_subject() {
+            local commit="$1"
+            git show -s --format=%s "$commit"
+          }
+
+          tag_author() {
+            local commit="$1"
+            git show -s --format=%an "$commit"
+          }
+
+          tag_date() {
+            local commit="$1"
+            git show -s --format=%ad --date=short "$commit"
+          }
+
+          mapfile -t all_feature_tags < <(git tag -l 'feature-*' | sort)
+          if [[ "${#all_feature_tags[@]}" -eq 0 ]]; then
+            echo "No feature-* tags found" >&2
+            exit 1
+          fi
+
+          declare -A accepted_map
+          IFS=',' read -r -a input_tags <<< "$accepted_feature_tags"
+          for raw_tag in "${input_tags[@]}"; do
+            tag="$(printf '%s' "$raw_tag" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
+            if [[ -z "$tag" ]]; then
+              continue
+            fi
+            if [[ "$tag" != feature-* ]]; then
+              echo "Accepted tag must match feature-* pattern ($tag)" >&2
+              exit 1
+            fi
+            if ! git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+              echo "Missing tag ($tag)" >&2
+              exit 1
+            fi
+            accepted_map["$tag"]=1
+          done
+
+          if [[ "${#accepted_map[@]}" -eq 0 ]]; then
+            echo "No accepted feature tags provided after parsing" >&2
+            exit 1
+          fi
+
+          oldest_non_accepted_tag=""
+          oldest_non_accepted_epoch=""
+          for tag in "${all_feature_tags[@]}"; do
+            if [[ -n "${accepted_map[$tag]:-}" ]]; then
+              continue
+            fi
+            if git rev-parse -q --verify "refs/tags/merged-$tag" >/dev/null; then
+              continue
+            fi
+            commit="$(tag_commit "$tag")"
+            epoch="$(tag_epoch "$commit")"
+            if [[ -z "$oldest_non_accepted_epoch" || "$epoch" -lt "$oldest_non_accepted_epoch" ]]; then
+              oldest_non_accepted_epoch="$epoch"
+              oldest_non_accepted_tag="$tag"
+            fi
+          done
+
+          if [[ -n "$oldest_non_accepted_tag" ]]; then
+            baseline_source_commit="$(tag_commit "$oldest_non_accepted_tag")"
+            baseline_commit="$(git rev-parse "$baseline_source_commit^" 2>/dev/null || echo "$baseline_source_commit")"
+          else
+            baseline_commit="$(git rev-list --max-parents=0 HEAD | tail -n 1)"
+          fi
+
+          {
+            echo "baseline-commit=$baseline_commit"
+            echo "oldest-non-accepted-tag=${oldest_non_accepted_tag:-none}"
+          } >> "$GITHUB_OUTPUT"
+
+          : > plan.tsv
+
+          for tag in "${!accepted_map[@]}"; do
+            commit="$(tag_commit "$tag")"
+            if ! git merge-base --is-ancestor "$baseline_commit" "$commit"; then
+              continue
+            fi
+            printf 'feature\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+              "$tag" \
+              "$commit" \
+              "$(tag_epoch "$commit")" \
+              "$(tag_subject "$commit")" \
+              "$(tag_author "$commit")" \
+              "$(tag_date "$commit")" >> plan.tsv
+          done
+
+          for pattern in 'hotfix-*' 'version-*'; do
+            while IFS= read -r tag; do
+              [[ -z "$tag" ]] && continue
+              commit="$(tag_commit "$tag")"
+              if ! git merge-base --is-ancestor "$baseline_commit" "$commit"; then
+                continue
+              fi
+              type="hotfix"
+              if [[ "$pattern" == 'version-*' ]]; then
+                type="version"
+              fi
+              printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+                "$type" \
+                "$tag" \
+                "$commit" \
+                "$(tag_epoch "$commit")" \
+                "$(tag_subject "$commit")" \
+                "$(tag_author "$commit")" \
+                "$(tag_date "$commit")" >> plan.tsv
+            done < <(git tag -l "$pattern" | sort)
+          done
+
+          if [[ ! -s plan.tsv ]]; then
+            echo "No commits resolved for pre-release plan" >&2
+            exit 1
+          fi
+
+          sort -t $'\t' -k4,4n -k3,3 plan.tsv | awk -F '\t' '!seen[$3]++' > plan.sorted.tsv
+          mv plan.sorted.tsv plan.tsv
+          awk -F '\t' '{print $3}' plan.tsv > commits.txt
+
+          {
+            echo "planned-commit-count=$(wc -l < commits.txt)"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "# Pre-release Notes"
+            echo ""
+            echo "Version bump: ${version_bump}"
+            echo "Baseline commit: ${baseline_commit}"
+            echo "Oldest non-accepted feature tag: ${oldest_non_accepted_tag:-none}"
+            echo ""
+            echo "## Included changes"
+            echo ""
+            while IFS=$'\t' read -r type tag commit _epoch subject author date; do
+              short_commit="${commit:0:7}"
+              echo "- [${type}] ${tag} (${short_commit}) - ${subject} (${author}, ${date})"
+            done < plan.tsv
+          } > release-notes.md
+
+      - name: Generate plan summary
+        run: |
+          set -euo pipefail
+          {
+            echo "## Pre-release plan"
+            echo ""
+            echo "- Branch: ${branch}"
+            echo "- Version bump: ${version_bump}"
+            echo "- Dry run: ${{ github.event.inputs.dry_run }}"
+            echo "- Accepted feature tags: ${accepted_feature_tags}"
+            echo "- Oldest non-accepted feature tag: ${{ steps.plan.outputs.oldest-non-accepted-tag }}"
+            echo "- Baseline commit: ${{ steps.plan.outputs.baseline-commit }}"
+            echo "- Planned commits: ${{ steps.plan.outputs.planned-commit-count }}"
+            echo ""
+            echo "### Release notes"
+            cat release-notes.md
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create pre-release branch and cherry-pick commits (non-dry-run)
+        if: ${{ github.event.inputs.dry_run == 'false' }}
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$branch" "origin/dev"
+
+          while IFS=$'\t' read -r _type tag commit _epoch _subject _author _date; do
+            if ! git cherry-pick "$commit"; then
+              {
+                echo "## Cherry-pick conflict"
+                echo ""
+                echo "- Tag: ${tag}"
+                echo "- Commit: ${commit}"
+                echo "- Branch: ${branch}"
+                echo ""
+                echo "### Git status"
+                echo '```text'
+                git status --short
+                echo '```'
+              } >> "$GITHUB_STEP_SUMMARY"
+
+              git cherry-pick --abort || true
+              exit 1
+            fi
+          done < plan.tsv
+
+          cp release-notes.md PRE_RELEASE_NOTES.md
+          git add PRE_RELEASE_NOTES.md
+          git commit -m "docs: add pre-release notes for ${branch}"
+          git push origin "$branch"
+
+      - name: Create PR to staging (non-dry-run)
+        if: ${{ github.event.inputs.dry_run == 'false' }}
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        env:
+          VERSION_BUMP: ${{ github.event.inputs.version_bump }}
+          ACCEPTED_FEATURE_TAGS: ${{ github.event.inputs.accepted_feature_tags }}
+        with:
+          script: |
+            const fs = require('fs');
+            const branch = process.env.branch;
+            const versionBump = process.env.VERSION_BUMP;
+            const acceptedFeatureTags = process.env.ACCEPTED_FEATURE_TAGS;
+            const releaseNotes = fs.readFileSync('release-notes.md', 'utf8');
+
+            const response = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: branch,
+              base: 'staging',
+              title: `Pre-release: ${versionBump}`,
+              body: [
+                'Automated pre-release PR generated from accepted feature tags.',
+                '',
+                `Version bump: ${versionBump}`,
+                `Accepted feature tags: ${acceptedFeatureTags}`,
+                '',
+                releaseNotes,
+              ].join('\n'),
+            });
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: response.data.number,
+              labels: [versionBump],
+            });
+
+      - name: Dry-run completion marker
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: |
+          set -euo pipefail
+          echo "Dry run complete. No branch or PR created."

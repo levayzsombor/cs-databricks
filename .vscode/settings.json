@@ -15,5 +15,23 @@
     "helm/**/templates/*.yaml": "helm-template",
     "helm/**/templates/*.tpl": "helm-template"
   },
-  "cSpell.words": ["pytest", "venv"]
+  "cSpell.words": [
+    "azuredevops",
+    "configmap",
+    "ipynb",
+    "loguru",
+    "matplotlib",
+    "myapp",
+    "playthrough",
+    "Pydantic",
+    "pytest",
+    "scanability",
+    "seaborn",
+    "trufflesecurity",
+    "typy",
+    "USERELATIONSHIP",
+    "venv",
+    "WCAG",
+    "Zustand"
+  ]
 }

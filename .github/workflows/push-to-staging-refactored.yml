@@ -11,6 +11,9 @@ concurrency:
   group: 'push-to-staging'
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 env:
   DATABRICKS_HOST: https://adb-7405615578261463.3.azuredatabricks.net
   ENVIRONMENT: staging
@@ -20,6 +23,9 @@ jobs:
   deploy-to-staging:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
 
     steps:
       - name: Checkout repository

@@ -11,6 +11,9 @@ concurrency:
   group: 'push-to-dev'
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 env:
   DATABRICKS_HOST: https://adb-7405618359915433.13.azuredatabricks.net
   ENVIRONMENT: dev
@@ -20,6 +23,9 @@ jobs:
   deploy-to-dev:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
 
     steps:
       - name: Checkout repository
