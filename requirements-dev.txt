@@ -2,6 +2,7 @@
 
 pre-commit
 pytest
+pytest-mock
 ruff
 ty
 uv
