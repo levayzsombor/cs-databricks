@@ -65,7 +65,7 @@ Build and maintain CI/CD pipelines, GitHub Actions workflows, Helm charts, and B
 
 **Still required**:
 
-1. Validate manual gate behavior in a fresh hosted run after workflow update.
+1. Configure `pre-release-conflict-resolution` environment required reviewers to enforce approval pause.
 2. Add automated fallback/notification strategy for cherry-pick conflicts.
 3. Finalize how merged-feature tags and alpha-version tags are linked post-merge.
 4. Add regression checks for edge cases (missing tags, duplicate commits, empty plan).
@@ -119,6 +119,8 @@ Build and maintain CI/CD pipelines, GitHub Actions workflows, Helm charts, and B
 - Implemented manual conflict-resolution gate in `.github/workflows/create-pre-release-scaffold.yml` using environment `pre-release-conflict-resolution`.
 - Updated workflow to suppress auto-PR creation when conflicts are detected and emit conflict outputs for gate handling.
 - Updated runbook with manual gate setup and operator resolution procedure.
+- Re-ran hosted dry-run validation on updated workflow: run `30222576849` (success).
+- Re-ran hosted live-run validation on updated workflow: run `30222579554` (manual gate job executed and failed closed as designed).
 
 ---
 

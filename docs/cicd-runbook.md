@@ -75,6 +75,24 @@ Repository-hosted runs were executed on `milestone-3` with:
 - Dry-run path is validated in GitHub-hosted execution.
 - Live path is validated to fail closed on real cherry-pick conflict and requires conflict-resolution policy for production operations.
 
+### Re-Validation After Manual Gate Update (2026-07-26)
+
+After merging latest `origin/milestone-3` into local and re-running hosted validations:
+
+1. Dry-run hosted run: **SUCCESS**
+
+- Run ID: `30222576849`
+- URL: `https://github.com/levayzsombor/cs-databricks/actions/runs/30222576849`
+
+2. Live-run hosted run: **FAILURE via manual gate path (expected fail-closed)**
+
+- Run ID: `30222579554`
+- URL: `https://github.com/levayzsombor/cs-databricks/actions/runs/30222579554`
+- `create-pre-release` job completed with conflict handling and PR step skipped.
+- `manual-conflict-resolution-gate` job executed and failed intentionally at `Require manual cherry-pick conflict resolution`.
+
+This confirms the workflow now routes conflict scenarios into the manual gate flow instead of failing directly in cherry-pick processing.
+
 ## Manual Conflict-Resolution Gate (Pre-Release)
 
 The pre-release workflow now includes a dedicated manual gate job:
@@ -89,6 +107,8 @@ The pre-release workflow now includes a dedicated manual gate job:
 1. Create/configure the `pre-release-conflict-resolution` environment in GitHub.
 2. Add required reviewers for manual approval.
 3. Optionally scope secrets to this environment if operational notifications are added later.
+
+Without required reviewers configured, the gate job will run immediately and fail closed without an approval pause.
 
 ### Operator Procedure After Gate Fires
 
