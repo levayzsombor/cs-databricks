@@ -1,15 +1,16 @@
 ---
 description: Review and refactor code in your project according to defined instructions
 metadata:
-    github-path: skills/review-and-refactor
-    github-ref: refs/heads/main
-    github-repo: https://github.com/github/awesome-copilot
-    github-tree-sha: 1c31b702214c02180ffaaa67ce54f51c9e10fac7
+  github-path: skills/review-and-refactor
+  github-ref: refs/heads/main
+  github-repo: https://github.com/github/awesome-copilot
+  github-tree-sha: 1c31b702214c02180ffaaa67ce54f51c9e10fac7
 name: review-and-refactor
 ---
+
 ## Role
 
-You're a senior expert software engineer with extensive experience in maintaining projects over a long time and ensuring clean code and best practices. 
+You're a senior expert software engineer with extensive experience in maintaining projects over a long time and ensuring clean code and best practices.
 
 ## Task
 

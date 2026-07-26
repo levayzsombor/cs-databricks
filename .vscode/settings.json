@@ -1,6 +1,37 @@
 {
-    "jupyter.interactiveWindow.cellMarker.codeRegex": "^# COMMAND ----------|^# Databricks notebook source|^(#\\s*%%|#\\s*\\<codecell\\>|#\\s*In\\[\\d*?\\]|#\\s*In\\[ \\])",
-    "jupyter.interactiveWindow.cellMarker.default": "# COMMAND ----------",
-    "dev.containers.mountWaylandSocket": false,
-    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python"
+  "jupyter.interactiveWindow.cellMarker.codeRegex": "^# COMMAND ----------|^# Databricks notebook source|^(#\\s*%%|#\\s*\\<codecell\\>|#\\s*In\\[\\d*?\\]|#\\s*In\\[ \\])",
+  "jupyter.interactiveWindow.cellMarker.default": "# COMMAND ----------",
+  "dev.containers.mountWaylandSocket": false,
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "explicit"
+  },
+  "problems.showCurrentInStatus": true,
+  "yaml.validate": true,
+  "yaml.hover": true,
+  "files.associations": {
+    "helm/**/templates/*.yaml": "helm-template",
+    "helm/**/templates/*.tpl": "helm-template"
+  },
+  "cSpell.words": [
+    "azuredevops",
+    "configmap",
+    "ipynb",
+    "loguru",
+    "matplotlib",
+    "myapp",
+    "playthrough",
+    "Pydantic",
+    "pytest",
+    "scanability",
+    "seaborn",
+    "trufflesecurity",
+    "typy",
+    "USERELATIONSHIP",
+    "venv",
+    "WCAG",
+    "Zustand"
+  ]
 }

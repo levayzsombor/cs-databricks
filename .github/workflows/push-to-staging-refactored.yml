@@ -1,0 +1,77 @@
+name: 'Push to staging'
+
+on:
+  pull_request:
+    branches:
+      - staging
+    types:
+      - closed
+
+concurrency:
+  group: 'push-to-staging'
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  DATABRICKS_HOST: https://adb-7405615578261463.3.azuredatabricks.net
+  ENVIRONMENT: staging
+  LOG_ANALYTICS_WORKSPACE_ID: 7d0cb39c-348d-4863-91e1-efefc333fc11
+
+jobs:
+  deploy-to-staging:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Setup Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install databricks-sdk requests
+
+      - name: Run tests
+        run: pip install -r requirements-dev.txt && pytest tests/ -v
+
+      - name: Deploy notebooks to Databricks STAGING
+        id: deploy
+        env:
+          DATABRICKS_PAT: ${{ secrets.DATABRICKS_STAGING_PAT }}
+          PR_HEAD_REF: ${{ github.head_ref }}
+        run: .github/workflows/scripts/ci_deploy_notebooks.sh staging "$PR_HEAD_REF" "${{ env.DATABRICKS_HOST }}" deployment-result.json false
+
+      - name: Run health checks
+        id: health-check
+        env:
+          DATABRICKS_PAT: ${{ secrets.DATABRICKS_STAGING_PAT }}
+        run: .github/workflows/scripts/ci_health_check.sh staging "${{ env.DATABRICKS_HOST }}" 300
+
+      - name: Send deployment logs to Log Analytics
+        if: always()
+        env:
+          LOG_ANALYTICS_WORKSPACE_KEY: ${{ secrets.LOG_ANALYTICS_WORKSPACE_KEY }}
+        run: .github/workflows/scripts/ci_send_logs.sh "${{ env.LOG_ANALYTICS_WORKSPACE_ID }}" "${{ env.LOG_ANALYTICS_WORKSPACE_KEY }}" staging "${{ job.status }}" deployment-result.json
+
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `❌ **STAGING Deployment Failed**\n\nCheck workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
+            })

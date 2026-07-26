@@ -1,0 +1,100 @@
+name: 'Swap blue-green production environments'
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_swap:
+        description: 'Force swap without health checks (dangerous!)'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: read
+
+env:
+  LOG_ANALYTICS_WORKSPACE_ID: 7d0cb39c-348d-4863-91e1-efefc333fc11
+  BLUE_HOST: https://adb-7405606075384170.10.azuredatabricks.net
+  GREEN_HOST: https://adb-7405610871676215.15.azuredatabricks.net
+
+jobs:
+  pre-swap-verification:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.force_swap != 'true'
+    permissions:
+      contents: read
+    outputs:
+      blue-healthy: ${{ steps.check-blue.outputs.healthy }}
+      green-healthy: ${{ steps.check-green.outputs.healthy }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install databricks-sdk requests
+
+      - name: Verify BLUE environment health
+        id: check-blue
+        env:
+          DATABRICKS_PAT: ${{ secrets.DATABRICKS_BLUE_PAT }}
+        run: .github/workflows/scripts/ci_swap_check_env_health.sh blue "${{ env.BLUE_HOST }}" 60
+
+      - name: Verify GREEN environment health
+        id: check-green
+        env:
+          DATABRICKS_PAT: ${{ secrets.DATABRICKS_GREEN_PAT }}
+        run: .github/workflows/scripts/ci_swap_check_env_health.sh green "${{ env.GREEN_HOST }}" 60
+
+      - name: Fail if either environment unhealthy
+        if: steps.check-blue.outputs.healthy != 'true' || steps.check-green.outputs.healthy != 'true'
+        run: .github/workflows/scripts/ci_swap_fail_if_unhealthy.sh "${{ steps.check-blue.outputs.healthy }}" "${{ steps.check-green.outputs.healthy }}"
+
+  perform-swap:
+    needs: pre-swap-verification
+    if: always() # Run even if pre-swap-verification was skipped
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    environment: production # Require approval
+
+    steps:
+      - name: Setup Azure CLI
+        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get current Traffic Manager configuration
+        id: current-config
+        run: .github/workflows/scripts/ci_swap_get_current_config.sh tm-countrystats-prod countrystats-showcase
+
+      - name: Disable active endpoint
+        run: .github/workflows/scripts/ci_swap_update_endpoint.sh tm-countrystats-prod countrystats-showcase "${{ steps.current-config.outputs.active-env }}" Disabled
+
+      - name: Enable standby endpoint
+        run: .github/workflows/scripts/ci_swap_update_endpoint.sh tm-countrystats-prod countrystats-showcase "${{ steps.current-config.outputs.standby-env }}" Enabled
+
+      - name: Verify swap
+        run: .github/workflows/scripts/ci_swap_verify.sh tm-countrystats-prod countrystats-showcase "${{ steps.current-config.outputs.standby-env }}" 30
+
+      - name: Send swap event to Log Analytics
+        if: always()
+        env:
+          LOG_ANALYTICS_WORKSPACE_KEY: ${{ secrets.LOG_ANALYTICS_WORKSPACE_KEY }}
+        run: .github/workflows/scripts/ci_send_logs.sh "${{ env.LOG_ANALYTICS_WORKSPACE_ID }}" "${{ env.LOG_ANALYTICS_WORKSPACE_KEY }}" prod "swap_${{ steps.current-config.outputs.standby-env }}_active" "{}"
+
+      - name: Create GitHub Release
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: `prod-${{ steps.current-config.outputs.standby-env }}-$(date +%Y%m%d-%H%M%S)`,
+              name: `Production swap to ${{ steps.current-config.outputs.standby-env }}`,
+              body: `Active environment is now: ${{ steps.current-config.outputs.standby-env }}`
+            })

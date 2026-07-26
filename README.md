@@ -172,7 +172,7 @@ There are 5 environments that maintain a Databricks Azure Application. Since the
 
 ### Monitoring
 
-The monitoring of the environments and branches is done in a static web application inside Azure. This shows the tags of the 3 permanent branches. _**Version**_ for the **prod** branch, _**alpha-version**_ for the **staging** branch and all the _**features**_ waiting for acceptance by **UA**  for the **dev** branchmeaning, _**hotfix**_, _**dev-version**_ and _**merged-feature**_ tags are ignored only _**feature**_tags show. on a second tab the collected logs can be inspected.
+The monitoring of the environments and branches is done in a static web application inside Azure. This shows the tags of the 3 permanent branches. _**Version**_ for the **prod** branch, _**alpha-version**_ for the **staging** branch and all the _**features**_ waiting for acceptance by **UA** for the **dev** branchmeaning, _**hotfix**_, _**dev-version**_ and _**merged-feature**_ tags are ignored only _**feature**_tags show. on a second tab the collected logs can be inspected.
 
 ## Logging
 
@@ -182,7 +182,7 @@ Basic logs are pretty bad at giving information. A more structured and detailed 
 
 ### Code improvements
 
-The following ideas can be implemented in the code structure of the Databricks to achieve a more stable and robust structure. 
+The following ideas can be implemented in the code structure of the Databricks to achieve a more stable and robust structure.
 
 1. Static Type structure enforcement: Now that python supports type hints, linting and runtime type checks Interfaces and Types can be mandatory for the code to ensure the data going from one function to the other is in the expected shape.
 2. Linting and formatting can be enforced to have a clean unified look and adhere to the basic rules set up by the linter.
@@ -197,10 +197,11 @@ The following ideas can be implemented in the code structure of the Databricks t
 ### Structural tests
 
 For Databases the following functional tests can be implemented (these are also at the unit test level):
+
 1. Schema tests Checks schema formats, unmapped tables/columns, and overall database structure.
 2. Table & column tests: Ensures correct mapping, naming, and field length between functions (Between silver layer)
 3. Database server validation tests: Verifies server configurations, authorized actions, and capacity for user transactions.(for bronze layer)
 
 ### Smoke tests
 
-E2E tests that can run on the prod active or newly activated environment to check if basic functions work. can be done in playwright. 
+E2E tests that can run on the prod active or newly activated environment to check if basic functions work. can be done in playwright.
