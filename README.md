@@ -63,9 +63,7 @@ This will make sure that everyone works from the same setup if they chose to do 
 
 ![](assets/20260719_224736_CountryStats-lifecycle.drawio.png)
 
-###
-
-Explanation of branches and tags
+### Explanation of branches and tags
 
 Git branching strategies combining Git Rules ( for branches and tags ), GitHub Actions and Permissions help create an orderly merge for code making sure the protected branched have their intended version of the code.
 With the same GitHub Actions the Deployment and updates of the Azure applications can be started to make it automatic.
@@ -112,7 +110,7 @@ a Squash merge is recommended for all branches by default
 3. Dev branch (default, protected):
 
    - Permanent branch for development
-   - Only **feature**, **hotfix** and **version-sync** branches can merge into it
+   - Only **feature**, **hotfix** and **dev-version-update** branches can merge into it
    - Creates _**feature-(name)**_, _**hotfix-(name)**_, _**dev-version**_ tag based on what is merged into it
    - Checks if **feature** branch is rebased to **dev** branch current HEAD before merge
    - Deployed on DEV env and on UA
@@ -171,3 +169,38 @@ There are 5 environments that maintain a Databricks Azure Application. Since the
    - **prod** old version is here
    - dormant
    - can be updated with a newer **prod** version
+
+### Monitoring
+
+The monitoring of the environments and branches is done in a static web application inside Azure. This shows the tags of the 3 permanent branches. Version for the prod branch, alpha-version for the staging branch and all the features waiting for acceptance by UA meaning, hotfix, dev-version and merged-feature tags are ignored only feature-tags show. on a second tab the collected logs can be inspected.
+
+## Logging
+
+Basic logs are pretty bad at giving information. A more structured and detailed logging should be implemented by loguru for python and also for the CI CD pipelines.
+
+## Python code in Databricks
+
+### Code improvements
+
+The following ideas can be implemented in the code structure of the Databricks to achieve a more stable and robust structure. 
+
+1. Static Type structure enforcement: Now that python supports type hints, linting and runtime type checks Interfaces and Types can be mandatory for the code to ensure the data going from one function to the other is in the expected shape.
+2. Linting and formatting can be enforced to have a clean unified look and adhere to the basic rules set up by the linter.
+3. Notebooks should only contain basic instructions for code execution and data transferring between function and all logic should be in separated .py files. Nested or repeated logic should be moved into its own file. These will help creating and maintaining unit test for these files.
+
+### Unit Tests
+
+1. Each function should have their own unit test where every other database, function, API called by it is mocked to make sure only the targeted functions logic is tested.
+2. Unit test should be next to the tested function with test_ prefix. (boundary and error handling should be included here)
+3. These are quick tests, that don't connect or use any data and don't even use other functions. They are meant to test the logic inside the function and the interfaces it has with others for later regression runs.   
+
+### Structural tests
+
+For Databases the following functional tests can be implemented (these are also at the unit test level):
+1. Schema tests Checks schema formats, unmapped tables/columns, and overall database structure.
+2. Table & column tests: Ensures correct mapping, naming, and field length between functions (Between silver layer)
+3. Database server validation tests: Verifies server configurations, authorized actions, and capacity for user transactions.(for bronze layer)
+
+### Smoke tests
+
+E2E tests that can run on the prod active or newly activated environment to check if basic functions work. can be done in playwright. 
