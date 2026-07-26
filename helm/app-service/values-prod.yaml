@@ -1,0 +1,28 @@
+appService:
+  name: app-countrystats-prod
+  sku: P2V2
+  tier: PremiumV2
+  workerCount: 2
+
+  slots:
+    staging: true
+    production: true
+
+replicaCount: 2
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+
+monitoring:
+  enabled: true

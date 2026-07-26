@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: '{{ include "countrystats-dashboard.fullname" . }}-config'
+  namespace: '{{ .Release.Namespace }}'
+  labels:
+    helm.sh/chart: '{{ include "countrystats-dashboard.chart" . }}'
+    app.kubernetes.io/name: '{{ include "countrystats-dashboard.name" . }}'
+    app.kubernetes.io/instance: '{{ .Release.Name }}'
+    app.kubernetes.io/version: '{{ .Chart.AppVersion }}'
+    app.kubernetes.io/managed-by: '{{ .Release.Service }}'
+data:
+  # React environment variables
+  VITE_LOG_ANALYTICS_WORKSPACE_ID: '{{ .Values.config.logAnalytics.workspaceId }}'
+  VITE_DATABRICKS_DEV_HOST: '{{ .Values.config.databricks.dev.host }}'
+  VITE_DATABRICKS_UA_HOST: '{{ .Values.config.databricks.ua.host }}'
+  VITE_DATABRICKS_STAGING_HOST: '{{ .Values.config.databricks.staging.host }}'
+  VITE_DATABRICKS_BLUE_HOST: '{{ .Values.config.databricks.blue.host }}'
+  VITE_DATABRICKS_GREEN_HOST: '{{ .Values.config.databricks.green.host }}'
+
+  # App configuration
+  # {{ range .Values.env }}
+  '{{ .name }}': '{{ .value }}'
+  # {{ end }}
+
+  # Databricks SQL endpoint paths
+  DATABRICKS_DEV_SQL_PATH: '{{ .Values.config.databricks.dev.sqlEndpointPath }}'
+  DATABRICKS_UA_SQL_PATH: '{{ .Values.config.databricks.ua.sqlEndpointPath }}'
+  DATABRICKS_STAGING_SQL_PATH: '{{ .Values.config.databricks.staging.sqlEndpointPath }}'
+  DATABRICKS_BLUE_SQL_PATH: '{{ .Values.config.databricks.blue.sqlEndpointPath }}'
+  DATABRICKS_GREEN_SQL_PATH: '{{ .Values.config.databricks.green.sqlEndpointPath }}'

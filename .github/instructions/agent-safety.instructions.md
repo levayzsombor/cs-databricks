@@ -44,6 +44,7 @@ applyTo: '**'
 ## Code Patterns
 
 When writing agent tool functions:
+
 ```python
 # Good: Governed tool with explicit policy
 @govern(policy)
@@ -56,6 +57,7 @@ async def search(query: str) -> str:
 ```
 
 When defining policies:
+
 ```yaml
 # Good: Explicit allowlist, content filters, rate limit
 name: my-agent
@@ -65,10 +67,11 @@ max_calls_per_request: 25
 
 # Bad: No restrictions
 name: my-agent
-allowed_tools: ["*"]
+allowed_tools: ['*']
 ```
 
 When composing multi-agent policies:
+
 ```python
 # Good: Most-restrictive-wins composition
 final_policy = compose_policies(org_policy, team_policy, agent_policy)
@@ -90,6 +93,6 @@ final_policy = agent_policy
 - Relying only on output guardrails (post-generation) instead of pre-execution governance
 - Hardcoding policy rules instead of loading from configuration
 - Allowing agents to self-modify their own governance policies
-- Forgetting to governance-check tool *arguments*, not just tool *names*
+- Forgetting to governance-check tool _arguments_, not just tool _names_
 - Not decaying trust scores over time — stale trust is dangerous
 - Logging prompts in audit trails — log decisions and metadata, not user content

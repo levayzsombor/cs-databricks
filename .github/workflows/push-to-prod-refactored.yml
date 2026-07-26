@@ -1,0 +1,130 @@
+name: 'Push to prod (Blue-Green Strategy)'
+
+on:
+  pull_request:
+    branches:
+      - prod
+    types:
+      - closed
+
+concurrency:
+  group: 'push-to-prod'
+  cancel-in-progress: false
+
+env:
+  LOG_ANALYTICS_WORKSPACE_ID: 7d0cb39c-348d-4863-91e1-efefc333fc11
+
+jobs:
+  determine-target:
+    runs-on: ubuntu-latest
+    outputs:
+      target-env: ${{ steps.determine.outputs.target-env }}
+      databricks-host: ${{ steps.determine.outputs.databricks-host }}
+      databricks-pat-secret: ${{ steps.determine.outputs.databricks-pat-secret }}
+    steps:
+      - name: Determine target environment (BLUE or GREEN)
+        id: determine
+        run: |
+          # Check current active environment from Traffic Manager or Config
+          # For now, deploy to BLUE by default (GREEN is standby)
+          echo "target-env=blue" >> $GITHUB_OUTPUT
+          echo "databricks-host=https://adb-7405606075384170.10.azuredatabricks.net" >> $GITHUB_OUTPUT
+          echo "databricks-pat-secret=DATABRICKS_BLUE_PAT" >> $GITHUB_OUTPUT
+
+  deploy-to-prod:
+    if: github.event.pull_request.merged == true
+    needs: determine-target
+    runs-on: ubuntu-latest
+    environment:
+      name: production # Require approval for production
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install databricks-sdk requests
+
+      - name: Run full test suite
+        run: |
+          pip install -r requirements-dev.txt
+          pytest tests/ -v --cov=src --cov-report=term-missing
+
+      - name: Deploy notebooks to Databricks ${{ needs.determine-target.outputs.target-env }}
+        id: deploy
+        env:
+          DATABRICKS_PAT: ${{ secrets[needs.determine-target.outputs.databricks-pat-secret] }}
+        run: |
+          python .github/workflows/scripts/deploy-notebooks.py \
+            --environment ${{ needs.determine-target.outputs.target-env }} \
+            --branch ${{ github.head_ref }} \
+            --databricks-host ${{ needs.determine-target.outputs.databricks-host }} \
+            --output-file deployment-result.json
+
+      - name: Run health checks
+        id: health-check
+        env:
+          DATABRICKS_PAT: ${{ secrets[needs.determine-target.outputs.databricks-pat-secret] }}
+        run: |
+          python .github/workflows/scripts/health-check.py \
+            --environment ${{ needs.determine-target.outputs.target-env }} \
+            --databricks-host ${{ needs.determine-target.outputs.databricks-host }} \
+            --timeout 300
+
+      - name: Run smoke tests
+        env:
+          DATABRICKS_PAT: ${{ secrets[needs.determine-target.outputs.databricks-pat-secret] }}
+        run: |
+          python .github/workflows/scripts/smoke-tests.py \
+            --environment ${{ needs.determine-target.outputs.target-env }} \
+            --databricks-host ${{ needs.determine-target.outputs.databricks-host }}
+
+      - name: Send deployment logs to Log Analytics
+        if: always()
+        env:
+          LOG_ANALYTICS_WORKSPACE_KEY: ${{ secrets.LOG_ANALYTICS_WORKSPACE_KEY }}
+        run: |
+          python .github/workflows/scripts/send-logs-to-analytics.py \
+            --workspace-id ${{ env.LOG_ANALYTICS_WORKSPACE_ID }} \
+            --workspace-key ${{ env.LOG_ANALYTICS_WORKSPACE_KEY }} \
+            --environment ${{ needs.determine-target.outputs.target-env }} \
+            --status "${{ job.status }}" \
+            --deployment-result deployment-result.json
+
+      - name: Notify on success
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.ref,
+              environment: 'production',
+              description: 'Production deployment',
+              production_environment: true,
+              auto_merge: false
+            })
+
+            console.log('✅ Production deployment successful')
+
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `❌ **PROD Deployment Failed**\n\nCheck workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
+            })

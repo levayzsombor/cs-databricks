@@ -1,0 +1,23 @@
+apiVersion: v2
+name: countrystats-dashboard
+description: Monitoring dashboard for Databricks environments (React + App Service)
+type: application
+version: 1.0.0
+appVersion: '1.0.0'
+
+keywords:
+  - databricks
+  - monitoring
+  - azure
+  - react
+  - dashboard
+
+maintainers:
+  - name: DevOps Team
+    email: devops@example.com
+
+home: https://github.com/levayzsombor/cs-databricks
+sources:
+  - https://github.com/levayzsombor/cs-databricks
+
+dependencies: []

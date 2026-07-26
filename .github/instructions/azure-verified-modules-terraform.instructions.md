@@ -40,7 +40,6 @@ More details on the AVM process can be found in the [Azure Verified Modules Cont
 - **Terraform Pattern Modules**: `https://raw.githubusercontent.com/Azure/Azure-Verified-Modules/refs/heads/main/docs/static/module-indexes/TerraformPatternModules.csv`
 - **Terraform Utility Modules**: `https://raw.githubusercontent.com/Azure/Azure-Verified-Modules/refs/heads/main/docs/static/module-indexes/TerraformUtilityModules.csv`
 
-
 ## Terraform Module Usage
 
 ### From Examples

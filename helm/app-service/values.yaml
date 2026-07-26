@@ -1,0 +1,142 @@
+# Default values for App Service deployment
+# Override these in environment-specific values files
+
+replicaCount: 1
+
+image:
+  repository: acrcountrystatsshow.azurecr.io/countrystats-dashboard
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: acr-credentials
+
+nameOverride: 'countrystats-dashboard'
+fullnameOverride: 'countrystats-dashboard'
+
+# App Service Configuration
+appService:
+  enabled: true
+  name: app-countrystats-prod
+  resourceGroup: countrystats-showcase
+  sku: B2
+  tier: Basic
+  workerCount: 1
+
+  # Blue-Green Slots
+  slots:
+    staging: true
+    production: true
+
+  # Networking
+  vnet:
+    enabled: false
+    name: ''
+    resourceGroup: ''
+
+# Configuration for React app
+config:
+  # Log Analytics
+  logAnalytics:
+    workspaceId: '7d0cb39c-348d-4863-91e1-efefc333fc11'
+    enabled: true
+
+  # Databricks environments
+  databricks:
+    dev:
+      host: adb-7405618359915433.13.azuredatabricks.net
+      sqlEndpointPath: /sql/1.0/warehouses/7327ec950d4737ba
+    ua:
+      host: adb-7405606676358457.17.azuredatabricks.net
+      sqlEndpointPath: /sql/1.0/warehouses/93dfd06facc07022
+    staging:
+      host: adb-7405615578261463.3.azuredatabricks.net
+      sqlEndpointPath: /sql/1.0/warehouses/1989987010e5fa85
+    blue:
+      host: adb-7405606075384170.10.azuredatabricks.net
+      sqlEndpointPath: /sql/1.0/warehouses/09b2ffdc4438589e
+    green:
+      host: adb-7405610871676215.15.azuredatabricks.net
+      sqlEndpointPath: /sql/1.0/warehouses/3550ae91cae7d01b
+
+# Environment variables passed to React app
+env:
+  - name: VITE_API_BASE_URL
+    value: '/'
+  - name: VITE_LOG_ANALYTICS_ENABLED
+    value: 'true'
+  - name: VITE_REFRESH_INTERVAL
+    value: '30000' # 30 seconds
+  - name: VITE_AUTO_REFRESH
+    value: 'true'
+
+# Secrets referenced from Key Vault
+secrets:
+  - name: log-analytics-workspace-key
+    keyVaultSecret: la-workspace-key
+  - name: databricks-dev-pat
+    keyVaultSecret: databricks-dev-pat
+  - name: databricks-ua-pat
+    keyVaultSecret: databricks-ua-pat
+  - name: databricks-staging-pat
+    keyVaultSecret: databricks-staging-pat
+  - name: databricks-blue-pat
+    keyVaultSecret: databricks-blue-pat
+  - name: databricks-green-pat
+    keyVaultSecret: databricks-green-pat
+
+# Health checks
+healthChecks:
+  enabled: true
+  readinessProbe:
+    path: /health
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  livenessProbe:
+    path: /
+    initialDelaySeconds: 30
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# Resource requests/limits
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# Autoscaling
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+
+# Ingress (if using App Service with custom domain)
+ingress:
+  enabled: false
+  className: 'azure-application-gateway'
+  annotations:
+    cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+  hosts:
+    - host: dashboard.countrystats.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: dashboard-tls
+      hosts:
+        - dashboard.countrystats.example.com
+
+# Monitoring
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: false
+  prometheusRule:
+    enabled: false

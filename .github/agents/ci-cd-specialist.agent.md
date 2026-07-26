@@ -7,6 +7,10 @@ tools:
   - web
   - browser
   - todo
+  - read
+  - edit
+  - search
+  - execute
 ---
 
 ## CI/CD & Deployment Specialist

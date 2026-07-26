@@ -1,4 +1,10 @@
+---
 extends: default
+
+ignore: |
+  node_modules/
+  .venv/
+  helm/**/templates/
 
 rules:
   line-length:

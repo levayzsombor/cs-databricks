@@ -1,0 +1,97 @@
+# Databricks Job Orchestration
+
+jobs:
+  country_stats_collector:
+    enabled: true
+    description: 'Collect country statistics from external APIs'
+    schedule:
+      quartz_cron_expression: '0 0 * * * ?' # Daily at midnight
+      timezone_id: 'UTC'
+
+    # Databricks cluster configuration
+    cluster:
+      spark_version: '15.3.x-scala2.12'
+      node_type_id: 'i3.xlarge'
+      num_workers: 2
+      driver_node_type_id: 'i3.xlarge'
+
+      # Auto-termination after idle time
+      idle_timeout_minutes: 30
+
+    # Notebook to execute
+    notebook_path: '/Shared/ci-cd/{environment}/country_stats_collector'
+
+    # Max concurrent runs
+    max_concurrent_runs: 1
+
+    # Task parameters
+    parameters:
+      - key: 'environment'
+        value: '{environment}'
+      - key: 'log_analytics_workspace_id'
+        value: '7d0cb39c-348d-4863-91e1-efefc333fc11'
+
+  data_quality_checks:
+    enabled: true
+    description: 'Run data quality validation'
+    schedule:
+      quartz_cron_expression: '0 15 * * * ?' # Daily at 3 PM
+      timezone_id: 'UTC'
+
+    cluster:
+      spark_version: '15.3.x-scala2.12'
+      node_type_id: 'i3.large'
+      num_workers: 1
+      driver_node_type_id: 'i3.large'
+      idle_timeout_minutes: 20
+
+    notebook_path: '/Shared/ci-cd/{environment}/data_quality_checks'
+    max_concurrent_runs: 1
+
+    parameters:
+      - key: 'environment'
+        value: '{environment}'
+      - key: 'fail_on_error'
+        value: 'true'
+
+# Environment-specific configurations
+environments:
+  dev:
+    enabled: true
+    databricks_host: 'adb-7405618359915433.13.azuredatabricks.net'
+    databricks_pat_secret: 'databricks-dev-pat'
+
+  ua:
+    enabled: true
+    databricks_host: 'adb-7405606676358457.17.azuredatabricks.net'
+    databricks_pat_secret: 'databricks-ua-pat'
+
+  staging:
+    enabled: true
+    databricks_host: 'adb-7405615578261463.3.azuredatabricks.net'
+    databricks_pat_secret: 'databricks-staging-pat'
+
+  blue:
+    enabled: true
+    databricks_host: 'adb-7405606075384170.10.azuredatabricks.net'
+    databricks_pat_secret: 'databricks-blue-pat'
+
+  green:
+    enabled: false # Only enable when preparing for blue-green swap
+    databricks_host: 'adb-7405610871676215.15.azuredatabricks.net'
+    databricks_pat_secret: 'databricks-green-pat'
+
+# Logging configuration
+logging:
+  log_analytics_enabled: true
+  log_analytics_workspace_id: '7d0cb39c-348d-4863-91e1-efefc333fc11'
+
+# Notifications
+notifications:
+  enabled: true
+  on_failure:
+    - type: email
+      addresses:
+        - alerts@example.com
+  on_success:
+    - type: log_analytics

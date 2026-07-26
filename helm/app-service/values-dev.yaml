@@ -1,0 +1,17 @@
+appService:
+  name: app-countrystats-dev
+  sku: B1
+  tier: Basic
+
+replicaCount: 1
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+
+autoscaling:
+  enabled: false

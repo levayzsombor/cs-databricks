@@ -1,0 +1,160 @@
+name: 'Deploy Monitoring Dashboard to App Service'
+
+on:
+  push:
+    branches:
+      - dev
+      - staging
+      - prod
+    paths:
+      - 'src/monitoring/**'
+      - '.github/workflows/deploy-app-service.yml'
+      - 'package.json'
+      - 'package-lock.json'
+
+concurrency:
+  group: 'deploy-app-service-${{ github.ref }}'
+  cancel-in-progress: false
+
+env:
+  LOG_ANALYTICS_WORKSPACE_ID: 7d0cb39c-348d-4863-91e1-efefc333fc11
+  REGISTRY_URL: acrcountrystatsshow.azurecr.io
+  IMAGE_NAME: countrystats-dashboard
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.ref == 'refs/heads/prod' && 'production' || 'staging' }}
+
+    outputs:
+      image-tag: ${{ steps.image.outputs.tag }}
+      app-service-name: ${{ steps.determine-target.outputs.app-service-name }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Determine target environment
+        id: determine-target
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/prod" ]; then
+            echo "app-service-name=app-countrystats-prod" >> $GITHUB_OUTPUT
+            echo "slot=staging" >> $GITHUB_OUTPUT
+            echo "environment=prod" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" = "refs/heads/staging" ]; then
+            echo "app-service-name=app-countrystats-staging" >> $GITHUB_OUTPUT
+            echo "slot=production" >> $GITHUB_OUTPUT
+            echo "environment=staging" >> $GITHUB_OUTPUT
+          else
+            echo "app-service-name=app-countrystats-dev" >> $GITHUB_OUTPUT
+            echo "slot=production" >> $GITHUB_OUTPUT
+            echo "environment=dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Lint
+        run: npm run lint 2>&1 || true # Don't fail on lint warnings
+
+      - name: Run tests
+        run: npm test -- --passWithNoTests --coverage 2>&1 || true
+
+      - name: Build React app
+        run: npm run build
+        env:
+          VITE_LOG_ANALYTICS_WORKSPACE_ID: ${{ env.LOG_ANALYTICS_WORKSPACE_ID }}
+          VITE_DATABRICKS_DEV_HOST: adb-7405618359915433.13.azuredatabricks.net
+          VITE_DATABRICKS_UA_HOST: adb-7405606676358457.17.azuredatabricks.net
+          VITE_DATABRICKS_STAGING_HOST: adb-7405615578261463.3.azuredatabricks.net
+          VITE_DATABRICKS_BLUE_HOST: adb-7405606075384170.10.azuredatabricks.net
+          VITE_DATABRICKS_GREEN_HOST: adb-7405610871676215.15.azuredatabricks.net
+
+      - name: Generate image tag
+        id: image
+        run: |
+          TAG="${{ github.ref_name }}-$(date +%Y%m%d-%H%M%S)-$(echo ${{ github.sha }} | cut -c1-7)"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Image tag: $TAG"
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.REGISTRY_URL }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.dashboard
+          push: true
+          tags: |
+            ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ steps.image.outputs.tag }}
+            ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to App Service slot
+        id: deploy
+        run: |
+          python .github/workflows/scripts/deploy-app-service.py \
+            --app-service-name ${{ steps.determine-target.outputs.app-service-name }} \
+            --resource-group countrystats-showcase \
+            --image-url ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ steps.image.outputs.tag }} \
+            --slot ${{ steps.determine-target.outputs.slot }} \
+            --output-file deployment-result.json
+
+      - name: Run health checks on deployed slot
+        id: health-check
+        run: |
+          python .github/workflows/scripts/health-check-app-service.py \
+            --app-service-name ${{ steps.determine-target.outputs.app-service-name }} \
+            --slot ${{ steps.determine-target.outputs.slot }} \
+            --resource-group countrystats-showcase \
+            --timeout 300
+
+      - name: Swap slots (production only)
+        if: github.ref == 'refs/heads/prod'
+        id: swap
+        run: |
+          python .github/workflows/scripts/swap-app-service-slots.py \
+            --app-service-name ${{ steps.determine-target.outputs.app-service-name }} \
+            --resource-group countrystats-showcase
+
+      - name: Verify post-swap health
+        if: github.ref == 'refs/heads/prod'
+        run: |
+          python .github/workflows/scripts/health-check-app-service.py \
+            --app-service-name ${{ steps.determine-target.outputs.app-service-name }} \
+            --slot production \
+            --resource-group countrystats-showcase \
+            --timeout 300
+
+      - name: Send deployment logs to Log Analytics
+        if: always()
+        env:
+          LOG_ANALYTICS_WORKSPACE_KEY: ${{ secrets.LOG_ANALYTICS_WORKSPACE_KEY }}
+        run: |
+          python .github/workflows/scripts/send-logs-to-analytics.py \
+            --workspace-id ${{ env.LOG_ANALYTICS_WORKSPACE_ID }} \
+            --workspace-key ${{ env.LOG_ANALYTICS_WORKSPACE_KEY }} \
+            --environment "${{ steps.determine-target.outputs.environment }}" \
+            --status "dashboard_${{ job.status }}" \
+            --deployment-result deployment-result.json

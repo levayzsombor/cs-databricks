@@ -1,0 +1,89 @@
+name: 'Push to dev'
+
+on:
+  pull_request:
+    branches:
+      - dev
+    types:
+      - closed
+
+concurrency:
+  group: 'push-to-dev'
+  cancel-in-progress: false
+
+env:
+  DATABRICKS_HOST: https://adb-7405618359915433.13.azuredatabricks.net
+  ENVIRONMENT: dev
+  LOG_ANALYTICS_WORKSPACE_ID: 7d0cb39c-348d-4863-91e1-efefc333fc11
+
+jobs:
+  deploy-to-dev:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install databricks-sdk requests
+
+      - name: Run tests
+        run: |
+          pip install -r requirements-dev.txt
+          pytest tests/ -v
+
+      - name: Deploy notebooks to Databricks DEV
+        id: deploy
+        env:
+          DATABRICKS_PAT: ${{ secrets.DATABRICKS_DEV_PAT }}
+        run: |
+          python .github/workflows/scripts/deploy-notebooks.py \
+            --environment dev \
+            --branch ${{ github.head_ref }} \
+            --databricks-host ${{ env.DATABRICKS_HOST }} \
+            --output-file deployment-result.json
+          cat deployment-result.json >> $GITHUB_OUTPUT
+
+      - name: Run health checks
+        id: health-check
+        env:
+          DATABRICKS_PAT: ${{ secrets.DATABRICKS_DEV_PAT }}
+        run: |
+          python .github/workflows/scripts/health-check.py \
+            --environment dev \
+            --databricks-host ${{ env.DATABRICKS_HOST }} \
+            --timeout 300
+
+      - name: Send deployment logs to Log Analytics
+        if: always()
+        env:
+          LOG_ANALYTICS_WORKSPACE_KEY: ${{ secrets.LOG_ANALYTICS_WORKSPACE_KEY }}
+        run: |
+          python .github/workflows/scripts/send-logs-to-analytics.py \
+            --workspace-id ${{ env.LOG_ANALYTICS_WORKSPACE_ID }} \
+            --workspace-key ${{ env.LOG_ANALYTICS_WORKSPACE_KEY }} \
+            --environment dev \
+            --status "${{ job.status }}" \
+            --deployment-result deployment-result.json
+
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `❌ **DEV Deployment Failed**\n\nCheck workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
+            })

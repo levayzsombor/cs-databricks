@@ -24,11 +24,11 @@ A structured set of instructions for GitHub Copilot to assist with quality assur
 
 Follow the test pyramid to balance coverage, speed, and maintenance cost:
 
-| Layer | Scope | Quantity | Speed |
-|-------|-------|----------|-------|
-| Unit | Single function / class | Many (60–70 %) | Milliseconds |
-| Integration | Module boundaries, DB, API contracts | Moderate (20–30 %) | Seconds |
-| End-to-End | Full user journey across UI + backend | Few (5–10 %) | Minutes |
+| Layer       | Scope                                 | Quantity           | Speed        |
+| ----------- | ------------------------------------- | ------------------ | ------------ |
+| Unit        | Single function / class               | Many (60–70 %)     | Milliseconds |
+| Integration | Module boundaries, DB, API contracts  | Moderate (20–30 %) | Seconds      |
+| End-to-End  | Full user journey across UI + backend | Few (5–10 %)       | Minutes      |
 
 - Prefer unit tests for business logic and edge cases.
 - Use integration tests to validate contracts between services and external dependencies.

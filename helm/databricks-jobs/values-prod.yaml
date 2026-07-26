@@ -1,0 +1,21 @@
+jobs:
+  country_stats_collector:
+    cluster:
+      num_workers: 3
+      idle_timeout_minutes: 15
+
+  data_quality_checks:
+    cluster:
+      num_workers: 2
+
+environments:
+  dev:
+    enabled: true
+  ua:
+    enabled: true
+  staging:
+    enabled: true
+  blue:
+    enabled: true
+  green:
+    enabled: false

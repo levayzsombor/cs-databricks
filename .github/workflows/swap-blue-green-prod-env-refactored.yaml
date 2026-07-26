@@ -1,0 +1,159 @@
+name: 'Swap blue-green production environments'
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_swap:
+        description: 'Force swap without health checks (dangerous!)'
+        required: false
+        default: 'false'
+
+env:
+  LOG_ANALYTICS_WORKSPACE_ID: 7d0cb39c-348d-4863-91e1-efefc333fc11
+  BLUE_HOST: https://adb-7405606075384170.10.azuredatabricks.net
+  GREEN_HOST: https://adb-7405610871676215.15.azuredatabricks.net
+
+jobs:
+  pre-swap-verification:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.force_swap != 'true'
+    outputs:
+      blue-healthy: ${{ steps.check-blue.outputs.healthy }}
+      green-healthy: ${{ steps.check-green.outputs.healthy }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install databricks-sdk requests
+
+      - name: Verify BLUE environment health
+        id: check-blue
+        env:
+          DATABRICKS_PAT: ${{ secrets.DATABRICKS_BLUE_PAT }}
+        run: |
+          python .github/workflows/scripts/health-check.py \
+            --environment blue \
+            --databricks-host ${{ env.BLUE_HOST }} \
+            --timeout 60 && echo "healthy=true" >> $GITHUB_OUTPUT || echo "healthy=false" >> $GITHUB_OUTPUT
+
+      - name: Verify GREEN environment health
+        id: check-green
+        env:
+          DATABRICKS_PAT: ${{ secrets.DATABRICKS_GREEN_PAT }}
+        run: |
+          python .github/workflows/scripts/health-check.py \
+            --environment green \
+            --databricks-host ${{ env.GREEN_HOST }} \
+            --timeout 60 && echo "healthy=true" >> $GITHUB_OUTPUT || echo "healthy=false" >> $GITHUB_OUTPUT
+
+      - name: Fail if either environment unhealthy
+        if: steps.check-blue.outputs.healthy != 'true' || steps.check-green.outputs.healthy != 'true'
+        run: |
+          echo "❌ Health checks failed!"
+          echo "BLUE: ${{ steps.check-blue.outputs.healthy }}"
+          echo "GREEN: ${{ steps.check-green.outputs.healthy }}"
+          exit 1
+
+  perform-swap:
+    needs: pre-swap-verification
+    if: always() # Run even if pre-swap-verification was skipped
+    runs-on: ubuntu-latest
+    environment: production # Require approval
+
+    steps:
+      - name: Setup Azure CLI
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get current Traffic Manager configuration
+        id: current-config
+        run: |
+          # Query Traffic Manager to see which environment is active
+          ACTIVE_ENV=$(az network traffic-manager endpoint show \
+            --name "blue-endpoint" \
+            --profile-name "tm-countrystats-prod" \
+            --resource-group "countrystats-showcase" \
+            --type "externalEndpoints" \
+            --query "properties.endpointStatus" -o tsv)
+
+          if [ "$ACTIVE_ENV" = "Enabled" ]; then
+            echo "active-env=blue" >> $GITHUB_OUTPUT
+            echo "standby-env=green" >> $GITHUB_OUTPUT
+          else
+            echo "active-env=green" >> $GITHUB_OUTPUT
+            echo "standby-env=blue" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Disable active endpoint
+        run: |
+          az network traffic-manager endpoint update \
+            --name "${{ steps.current-config.outputs.active-env }}-endpoint" \
+            --profile-name "tm-countrystats-prod" \
+            --resource-group "countrystats-showcase" \
+            --type "externalEndpoints" \
+            --endpoint-status "Disabled"
+
+          echo "Disabled ${{ steps.current-config.outputs.active-env }} endpoint"
+
+      - name: Enable standby endpoint
+        run: |
+          az network traffic-manager endpoint update \
+            --name "${{ steps.current-config.outputs.standby-env }}-endpoint" \
+            --profile-name "tm-countrystats-prod" \
+            --resource-group "countrystats-showcase" \
+            --type "externalEndpoints" \
+            --endpoint-status "Enabled"
+
+          echo "Enabled ${{ steps.current-config.outputs.standby-env }} endpoint"
+
+      - name: Verify swap
+        run: |
+          sleep 30  # Wait for DNS propagation
+
+          # Verify the new active endpoint is healthy
+          NEW_STATUS=$(az network traffic-manager endpoint show \
+            --name "${{ steps.current-config.outputs.standby-env }}-endpoint" \
+            --profile-name "tm-countrystats-prod" \
+            --resource-group "countrystats-showcase" \
+            --type "externalEndpoints" \
+            --query "properties.endpointStatus" -o tsv)
+
+          if [ "$NEW_STATUS" != "Enabled" ]; then
+            echo "❌ Swap verification failed!"
+            exit 1
+          fi
+
+          echo "✅ Swap verified successfully"
+          echo "Active environment: ${{ steps.current-config.outputs.standby-env }}"
+
+      - name: Send swap event to Log Analytics
+        if: always()
+        env:
+          LOG_ANALYTICS_WORKSPACE_KEY: ${{ secrets.LOG_ANALYTICS_WORKSPACE_KEY }}
+        run: |
+          python .github/workflows/scripts/send-logs-to-analytics.py \
+            --workspace-id ${{ env.LOG_ANALYTICS_WORKSPACE_ID }} \
+            --workspace-key ${{ env.LOG_ANALYTICS_WORKSPACE_KEY }} \
+            --environment prod \
+            --status "swap_${{ steps.current-config.outputs.standby-env }}_active" \
+            --deployment-result "{}"
+
+      - name: Create GitHub Release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: `prod-${{ steps.current-config.outputs.standby-env }}-$(date +%Y%m%d-%H%M%S)`,
+              name: `Production swap to ${{ steps.current-config.outputs.standby-env }}`,
+              body: `Active environment is now: ${{ steps.current-config.outputs.standby-env }}`
+            })

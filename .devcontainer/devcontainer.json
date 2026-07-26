@@ -20,6 +20,7 @@
     "ghcr.io/devcontainers/features/copilot-cli:1": {},
     "ghcr.io/devcontainers/features/github-cli:1": {},
     "ghcr.io/devcontainers/features/node:2": {},
+    "ghcr.io/devcontainers-extra/features/uv:1": {},
     "ghcr.io/devcontainers-extra/features/shellcheck:1": {},
     "ghcr.io/devcontainers-extra/features/shfmt:1": {},
     "ghcr.io/devcontainers-extra/features/actionlint:1": {},
@@ -42,6 +43,9 @@
         "waderyan.gitblame",
         "donjayamanne.githistory",
         "redhat.vscode-yaml",
+        "dbaeumer.vscode-eslint",
+        "usernamehw.errorlens",
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
         "timonwong.shellcheck",
         "ms-python.python",
         "ms-python.vscode-pylance",
@@ -57,7 +61,6 @@
         "GitHub.remotehub",
         "GitHub.copilot",
         "GitHub.copilot-chat",
-        "me-dutour-mathieu.vscode-github-actions",
         "esbenp.prettier-vscode",
         "mads-hartmann.bash-ide-vscode",
         "streetsidesoftware.code-spell-checker",
@@ -81,6 +84,17 @@
         "ruff.organizeImports": true,
         "editor.defaultFormatter": "esbenp.prettier-vscode",
         "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit",
+          "source.organizeImports": "explicit"
+        },
+        "problems.showCurrentInStatus": true,
+        "yaml.validate": true,
+        "yaml.hover": true,
+        "files.associations": {
+          "helm/**/templates/*.yaml": "helm-template",
+          "helm/**/templates/*.tpl": "helm-template"
+        },
         "editor.formatOnPaste": false,
         "editor.formatOnType": false,
         "[python]": {
