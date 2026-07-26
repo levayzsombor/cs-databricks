@@ -1,7 +1,7 @@
 ---
 name: 'Repository Planner Agent'
 description: 'Builds repo-aware implementation plans and stores them in plans/overview.md.'
-tools: ['read', 'search', 'edit']
+tools: ['read', 'search', 'edit', 'agent', 'browser', 'todo', 'web', 'vscode']
 target: 'vscode'
 ---
 
