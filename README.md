@@ -172,7 +172,7 @@ There are 5 environments that maintain a Databricks Azure Application. Since the
 
 ### Monitoring
 
-The monitoring of the environments and branches is done in a static web application inside Azure. This shows the tags of the 3 permanent branches. Version for the prod branch, alpha-version for the staging branch and all the features waiting for acceptance by UA meaning, hotfix, dev-version and merged-feature tags are ignored only feature-tags show. on a second tab the collected logs can be inspected.
+The monitoring of the environments and branches is done in a static web application inside Azure. This shows the tags of the 3 permanent branches. _**Version**_ for the **prod** branch, _**alpha-version**_ for the **staging** branch and all the _**features**_ waiting for acceptance by **UA**  for the **dev** branchmeaning, _**hotfix**_, _**dev-version**_ and _**merged-feature**_ tags are ignored only _**feature**_tags show. on a second tab the collected logs can be inspected.
 
 ## Logging
 
@@ -192,7 +192,7 @@ The following ideas can be implemented in the code structure of the Databricks t
 
 1. Each function should have their own unit test where every other database, function, API called by it is mocked to make sure only the targeted functions logic is tested.
 2. Unit test should be next to the tested function with test_ prefix. (boundary and error handling should be included here)
-3. These are quick tests, that don't connect or use any data and don't even use other functions. They are meant to test the logic inside the function and the interfaces it has with others for later regression runs.   
+3. These are quick tests, that don't connect or use any data and don't even use other functions. They are meant to test the logic inside the function and the shape of the incoming and outgoing data for later regression tests.
 
 ### Structural tests
 
